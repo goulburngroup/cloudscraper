@@ -51,8 +51,8 @@ class CloudTrax:
         """Return request id"""
         return self.request
 
-    def get_status(self):
-        """Return CloudTrax network status"""
+    def get_network_status(self):
+        """Return network information scraped from CloudTrax"""
         self.network_status = []
 
         self.request = self.session.get(CLOUDTRAX_BASE + DATA_URL,
@@ -108,5 +108,5 @@ parser.add_argument('--screen')
 
 cloudtrax = CloudTrax('set_your_network')
 cloudtrax.login()
-print cloudtrax.get_status()
+print cloudtrax.get_network_status()
 
