@@ -104,9 +104,12 @@ class CloudTrax:
 #
 
 parser = argparse.ArgumentParser(description='Statistics scraper for the CloudTrax controller')
+parser.add_argument('-n', '--network', nargs=1, help='The wifi network name on CloudTrax')
 parser.add_argument('--screen')
+args = parser.parse_args()
 
-cloudtrax = CloudTrax('set_your_network')
-cloudtrax.login()
-print cloudtrax.get_network_status()
+if args.network:
+    cloudtrax = CloudTrax(args.network[0])
+    cloudtrax.login()
+    print cloudtrax.get_network_status()
 
