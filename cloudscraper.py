@@ -28,8 +28,8 @@ class CloudTrax:
 
         self.config = ConfigParser.RawConfigParser()
         self.config.read(CONFIG_FILE)
-        self.username = self.config.get('set_your_network', 'username')
-        self.password = self.config.get('set_your_network', 'password')
+        self.username = self.config.get(self.network, 'username')
+        self.password = self.config.get(self.network, 'password')
 
     def login(self):
         """Method to login and create a web session"""
