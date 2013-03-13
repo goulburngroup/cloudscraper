@@ -53,6 +53,8 @@ class CloudTrax:
 
     def get_status(self):
         """Return CloudTrax network status"""
+        self.network_status = []
+
         self.request = self.session.get(CLOUDTRAX_BASE + DATA_URL,
                                         params={'network': self.network,
                                                 'showall': '1',
@@ -61,27 +63,40 @@ class CloudTrax:
         if self.request.status_code == 200:
             distilled_table = BeautifulSoup(self.request.content).find('table', {'id': 'mytable'})
 
-            keys = ('type', 'name', 'comment', 'mac', 'ip', 'chan_24', 'chan_58', 'users_24', 'download_24', 'upload_24', 'uptime', 'fw_version', 'fw_name', 'load', 'memfree', 'time_since_checkin', 'gateway_name', 'gateway_ip', 'hops', 'latency')
-
             for row in distilled_table.findAll('tr'):
-                cell_count = 0
-                text_list = []
-                values = []
+                raw_values = []
 
                 for cell in row.findAll('td'):
-                    text_list = cell.findAll(text=True)
+                    raw_values.append(cell.findAll(text=True))
 
-                    for text in text_list:
-                        values.append(text)
-                        if cell_count == 1 and len(text_list) == 1:
-                            values.append('NO COMMENT')
-                            
-                    cell_count += 1
-                print dict(zip(keys, values))
+                # Watch out for blank rows
+                if len(raw_values) > 0:
+                    # TODO: time_since_last_checkin can be a 2 element array if down.
+                    self.network_status.append({'type': raw_values[0][0],
+                                   'name': raw_values[1][0],
+                                   'comment': raw_values[1][-1],
+                                   'mac': raw_values[2][0],
+                                   'ip': raw_values[2][1],
+                                   'chan_24': raw_values[3][0],
+                                   'chan_58': raw_values[3][1],
+                                   'users_24': raw_values[4][0],
+                                   'download_24': raw_values[5][0],
+                                   'upload_24': raw_values[5][1],
+                                   'uptime': raw_values[6][0],
+                                   'fw_version': raw_values[7][0],
+                                   'fw_name': raw_values[7][1],
+                                   'load': raw_values[8][0],
+                                   'memfree': raw_values[8][1],
+                                   'time_since_checkin': raw_values[9][0],
+                                   'gateway_name': raw_values[10][0],
+                                   'gateway_ip': raw_values[10][1],
+                                   'hops': raw_values[11][0],
+                                   'latency': raw_values[12][0]})
+
         else:
-            print "It's all bad!!!!"
+            exit(1)
 
-        return self.request
+        return self.network_status
     
        
 #
@@ -93,5 +108,5 @@ parser.add_argument('--screen')
 
 cloudtrax = CloudTrax('set_your_network')
 cloudtrax.login()
-cloudtrax.get_status()
+print cloudtrax.get_status()
 
