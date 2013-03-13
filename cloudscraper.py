@@ -1,32 +1,40 @@
 #!/usr/bin/env python
+""" cloudscraper.py
+
+ A tool to extract and archive usage information from the CloudTrax wifi mesh
+dashboard (cloudtrax.com).
+
+"""
 
 from requests import session
 from BeautifulSoup import BeautifulSoup
 import argparse
 import ConfigParser
 
-config_file = 'cloudscraper.conf'
+CONFIG_FILE = 'cloudscraper.conf'
 
-cloudtrax_base = 'https://cloudtrax.com/'
-loginurl = 'dashboard.php'
-dataurl = 'nodes_attnt2.php'
-userurl = 'users2.php'
+CLOUDTRAX_BASE = 'https://cloudtrax.com/'
+LOGIN_URL = 'dashboard.php'
+DATA_URL = 'nodes_attnt2.php'
+USER_URL = 'users2.php'
 
 
 class CloudTrax:
     """CloudTrax connector class"""
 
     def __init__(self, network):
+        """Constructor"""
         self.network = network
 
         self.config = ConfigParser.RawConfigParser()
-        self.config.read(config_file)
+        self.config.read(CONFIG_FILE)
         self.username = self.config.get('set_your_network', 'username')
         self.password = self.config.get('set_your_network', 'password')
 
     def login(self):
+        """Method to login and create a web session"""
         self.session = session()
-        s = self.session.post(cloudtrax_base + loginurl, 
+        s = self.session.post(CLOUDTRAX_BASE + LOGIN_URL, 
                               data={'account': self.username,
                                     'password': self.password,
                                     'status': 'View Status'})
@@ -35,14 +43,17 @@ class CloudTrax:
 
         return self.session
 
-    def getSession(self):
+    def get_session(self):
+        """Return session id"""
         return self.session
 
-    def getRequest(self):
+    def get_request(self):
+        """Return request id"""
         return self.request
 
-    def getStatus(self):
-        self.request = self.session.get(cloudtrax_base + dataurl,
+    def get_status(self):
+        """Return CloudTrax network status"""
+        self.request = self.session.get(CLOUDTRAX_BASE + DATA_URL,
                                         params={'network': self.network,
                                                 'showall': '1',
                                                 'details': '1'})
@@ -82,5 +93,5 @@ parser.add_argument('--screen')
 
 cloudtrax = CloudTrax('set_your_network')
 cloudtrax.login()
-cloudtrax.getStatus()
+cloudtrax.get_status()
 
