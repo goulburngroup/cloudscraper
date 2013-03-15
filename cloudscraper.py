@@ -6,10 +6,9 @@ dashboard (cloudtrax.com).
 
 """
 
-from requests import session
-from time import time
 from BeautifulSoup import BeautifulSoup
 import argparse
+import requests
 import ConfigParser
 
 CONFIG_FILE = 'cloudscraper.conf'
@@ -40,7 +39,7 @@ class CloudTrax:
 
     def login(self):
         """Method to login and create a web session"""
-        self.session = session()
+        self.session = requests.session()
 
         self.print_if_verbose('Logging in to CloudTrax Dashboard')
 
@@ -48,13 +47,15 @@ class CloudTrax:
                       'password': self.password,
                       'status': 'View Status'}
 
-        s = self.session.post(self.login_url, data=parameters)
-
         try:
+            s = self.session.post(self.login_url, data=parameters)
             s.raise_for_status()
 
-        except requests.HTTPError:
-            print "Sucks to be you!"
+        except requests.exceptions.HTTPError:
+            self.print_if_verbose('There was a HTTP error')
+            exit(1)
+        except requests.exceptions.ConnectionError:
+            self.print_if_verbose('There was a connection error')
             exit(1)
 
         return self.session
