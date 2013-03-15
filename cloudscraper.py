@@ -25,6 +25,7 @@ class CloudTrax:
     def __init__(self, network):
         """Constructor"""
         self.network = network
+        self.network_status = []
 
         self.config = ConfigParser.RawConfigParser()
         self.config.read(CONFIG_FILE)
@@ -52,6 +53,14 @@ class CloudTrax:
         return self.request
 
     def get_network_status(self):
+        """Return network status"""
+        if len(self.network_status) == 0:
+            print 'refreshing'
+            self.refresh_network_status()
+
+        return self.network_status
+
+    def refresh_network_status(self):
         """Return network information scraped from CloudTrax"""
         self.network_status = []
 
@@ -71,7 +80,7 @@ class CloudTrax:
 
                 # Watch out for blank rows
                 if len(raw_values) > 0:
-                    # TODO: time_since_last_checkin can be a 2 element array if down.
+                    # TODO: time_since_last_checkin can be a 2 element array if down or late.
                     self.network_status.append({'type': raw_values[0][0],
                                    'name': raw_values[1][0],
                                    'comment': raw_values[1][-1],
@@ -115,7 +124,11 @@ args = parser.parse_args()
 if args.network:
     cloudtrax = CloudTrax(args.network[0])
     cloudtrax.login()
-    print cloudtrax.get_network_status()
+
+    if args.screen:
+        tmp = cloudtrax.get_network_status()
+        for t in tmp:
+            print t['name']
 else:
     parser.print_help()
     exit(1)
