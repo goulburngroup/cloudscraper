@@ -230,7 +230,6 @@ if args.network:
     cloudtrax.login()
 
     if args.screen:
-        print cloudtrax.get_network_status()
         print render_table(cloudtrax.get_network_status())
 
 else:
