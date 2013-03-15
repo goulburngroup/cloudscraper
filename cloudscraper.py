@@ -7,6 +7,7 @@ dashboard (cloudtrax.com).
 """
 
 from requests import session
+from time import time
 from BeautifulSoup import BeautifulSoup
 import argparse
 import ConfigParser
@@ -20,6 +21,8 @@ class CloudTrax:
         """Constructor"""
         self.network = network
         self.network_status = []
+
+        self.start_time = time()
 
         self.verbose = verbose
         self.print_if_verbose('Verbose output is turned on')
@@ -41,12 +44,18 @@ class CloudTrax:
 
         self.print_if_verbose('Logging in to CloudTrax Dashboard')
 
-        s = self.session.post(self.login_url, 
-                              data={'account': self.username,
-                                    'password': self.password,
-                                    'status': 'View Status'})
+        parameters = {'account': self.username,
+                      'password': self.password,
+                      'status': 'View Status'}
 
-        s.raise_for_status()
+        s = self.session.post(self.login_url, data=parameters)
+
+        try:
+            s.raise_for_status()
+
+        except requests.HTTPError:
+            print "Sucks to be you!"
+            exit(1)
 
         return self.session
 
@@ -75,7 +84,11 @@ class CloudTrax:
                       'showall': '1',
                       'details': '1'}
     
+        self.print_if_verbose('Requesting network status') 
+
         self.request = self.session.get(self.data_url, params=parameters)
+
+        self.print_if_verbose('Received network status ok') 
 
         if self.request.status_code == 200:
             distilled_table = BeautifulSoup(self.request.content).find('table', {'id': 'mytable'})
@@ -111,14 +124,15 @@ class CloudTrax:
                                    'latency': raw_values[12][0]})
 
         else:
-            exit(1)
+            print_if_verbose('Request failed') 
+            exit(self.request.status_code)
 
         return self.network_status
 
     def print_if_verbose(self, message):
         """Print the message to stdout if verbose output is requested"""
         if self.verbose:
-            print message
+            print "%.2f" % (time()-self.start_time), message
     
        
 #
