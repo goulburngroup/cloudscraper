@@ -10,9 +10,78 @@ from BeautifulSoup import BeautifulSoup
 from time import time
 import argparse
 import requests
+import texttable
 import ConfigParser
 
 CONFIG_FILE = 'cloudscraper.conf'
+
+TYPE = {'gw_down': '1',
+        'relay_down': '2',
+        'gw_up': '3',
+        'relay_up': '4',
+        'spare_gw_down': '5',
+        'spare_gw_up': '7'}
+
+def underline(text):
+    """Returns an underlined version of the text supplied"""
+
+    return text + '\n' + (len(text) * '-') + '\n'
+
+def render_table(data):
+    """Render a text table representation of the data supplied"""
+
+    gateway_table = texttable.Texttable()
+    gateway_table.header(['Name\n(Firmware)', 'Users', 'DL MB', 'UL MB', 'IP Address'])
+
+    relay_table = texttable.Texttable()
+    relay_table.header(['Name\n(Firmware)', 'Users', 'DL MB', 'UL MB', 'Gateway', 
+                        'Latency\nHops'])
+
+    spare_table = texttable.Texttable()
+    spare_table.header(['Name\n(Firmware)', 'Users', 'DL MB', 'UL MB', 'IP Address'])
+    omitted = 0
+
+    for item in data:
+        if item['type'] == TYPE['gw_up'] or item['type'] == TYPE['gw_down']:
+            row = [item['name'] +'\n(' + item['fw_version'] + ')',
+                   item['users_24'],
+                   item['download_24'], 
+                   item['upload_24'], 
+                   item['gateway_ip']]
+
+            gateway_table.add_row(row)
+        elif item['type'] == TYPE['relay_up'] or item['type'] == TYPE['relay_down']:
+            row = [item['name'] +'\n(' + item['fw_version'] + ')',
+                   item['users_24'],
+                   item['download_24'], 
+                   item['upload_24'], 
+                   item['gateway_name'],
+                   item['latency'] + 'ms\n' + item['hops']]
+
+            relay_table.add_row(row)
+        elif item['type'] == TYPE['spare_gw_up'] or item['type'] == TYPE['spare_gw_down']:
+            row = [item['name'] +'\n(' + item['fw_version'] + ')',
+                   item['users_24'],
+                   item['download_24'], 
+                   item['upload_24'], 
+                   item['gateway_ip']]
+
+            spare_table.add_row(row)
+        else:
+            omitted += 1
+
+    render = underline('Usage for the last 24 hours')
+    render += '\n\n' 'Gateway nodes' + '\n'
+    render += gateway_table.draw() + '\n'
+    render += '\n\n' + 'Relay nodes' + '\n'
+    render += relay_table.draw() + '\n'
+    render += '\n\n' + 'Spare nodes' + '\n'
+    render += spare_table.draw() + '\n'
+    if omitted > 0:
+        render += 'Warning: There are ' + str(omitted) + ' Nodes that have been missed from this report\n'
+
+    return render
+
 
 class CloudTrax:
     """CloudTrax connector class"""
@@ -161,9 +230,9 @@ if args.network:
     cloudtrax.login()
 
     if args.screen:
-        tmp = cloudtrax.get_network_status()
-        for t in tmp:
-            print t['name']
+        print cloudtrax.get_network_status()
+        print render_table(cloudtrax.get_network_status())
+
 else:
     parser.print_help()
     exit(1)
