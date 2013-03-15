@@ -16,10 +16,13 @@ CONFIG_FILE = 'cloudscraper.conf'
 class CloudTrax:
     """CloudTrax connector class"""
 
-    def __init__(self, network):
+    def __init__(self, network, verbose):
         """Constructor"""
         self.network = network
         self.network_status = []
+
+        self.verbose = verbose
+        self.print_if_verbose('Verbose output is turned on')
 
         self.config = ConfigParser.RawConfigParser()
         self.config.read(CONFIG_FILE)
@@ -35,6 +38,9 @@ class CloudTrax:
     def login(self):
         """Method to login and create a web session"""
         self.session = session()
+
+        self.print_if_verbose('Logging in to CloudTrax Dashboard')
+
         s = self.session.post(self.login_url, 
                               data={'account': self.username,
                                     'password': self.password,
@@ -55,7 +61,8 @@ class CloudTrax:
     def get_network_status(self):
         """Return network status"""
         if len(self.network_status) == 0:
-            print 'refreshing'
+            self.print_if_verbose('Refreshing network status from CloudTrax')
+
             self.refresh_network_status()
 
         return self.network_status
@@ -64,10 +71,11 @@ class CloudTrax:
         """Return network information scraped from CloudTrax"""
         self.network_status = []
 
-        self.request = self.session.get(self.data_url,
-                                        params={'network': self.network,
-                                                'showall': '1',
-                                                'details': '1'})
+        parameters = {'network': self.network,
+                      'showall': '1',
+                      'details': '1'}
+    
+        self.request = self.session.get(self.data_url, params=parameters)
 
         if self.request.status_code == 200:
             distilled_table = BeautifulSoup(self.request.content).find('table', {'id': 'mytable'})
@@ -106,6 +114,11 @@ class CloudTrax:
             exit(1)
 
         return self.network_status
+
+    def print_if_verbose(self, message):
+        """Print the message to stdout if verbose output is requested"""
+        if self.verbose:
+            print message
     
        
 #
@@ -113,16 +126,22 @@ class CloudTrax:
 #
 
 parser = argparse.ArgumentParser(description='Statistics scraper for the CloudTrax controller')
-parser.add_argument('-n', '--network', nargs=1, help='The wifi network name on CloudTrax')
-parser.add_argument('-f', '--file', nargs=1, help='Store the output to a file')
-parser.add_argument('-d', '--database', nargs=1, help='Store the output to a database')
-parser.add_argument('-s', '--screen', action='store_true', default=False, help='Display the output to stdout')
+parser.add_argument('-n', '--network', nargs=1, 
+                    help='The wifi network name on CloudTrax')
+parser.add_argument('-f', '--file', nargs=1, 
+                    help='Store the output to a file')
+parser.add_argument('-d', '--database', nargs=1, 
+                    help='Store the output to a database')
+parser.add_argument('-s', '--screen', action='store_true', default=False, 
+                    help='Display the output to stdout')
+parser.add_argument('-v', '--verbose', action='store_true', default=False, 
+                    help='Be Verbose')
 parser.add_argument('-N', '--network-status', help='Get the network status')
 parser.add_argument('-U', '--usage-stats', help='Get the usage statistics')
 args = parser.parse_args()
 
 if args.network:
-    cloudtrax = CloudTrax(args.network[0])
+    cloudtrax = CloudTrax(args.network[0], args.verbose)
     cloudtrax.login()
 
     if args.screen:
