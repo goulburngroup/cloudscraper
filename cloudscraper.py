@@ -7,6 +7,7 @@ dashboard (cloudtrax.com).
 """
 
 from BeautifulSoup import BeautifulSoup
+from time import time
 import argparse
 import requests
 import ConfigParser
