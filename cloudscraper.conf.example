@@ -1,3 +1,9 @@
+[common]
+cloudtrax_url = https://cloudtrax.com/
+login_page = dashboard.php
+data_page = nodes_attnt2.php
+user_page = users2.php
+
 [set_your_network]
 username = set_your_username
 password = set_your_password

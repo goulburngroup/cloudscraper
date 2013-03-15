@@ -13,12 +13,6 @@ import ConfigParser
 
 CONFIG_FILE = 'cloudscraper.conf'
 
-CLOUDTRAX_BASE = 'https://cloudtrax.com/'
-LOGIN_URL = 'dashboard.php'
-DATA_URL = 'nodes_attnt2.php'
-USER_URL = 'users2.php'
-
-
 class CloudTrax:
     """CloudTrax connector class"""
 
@@ -29,13 +23,19 @@ class CloudTrax:
 
         self.config = ConfigParser.RawConfigParser()
         self.config.read(CONFIG_FILE)
+
+        self.cloudtrax_url = self.config.get('common', 'cloudtrax_url')
+        self.login_url = self.cloudtrax_url + self.config.get('common', 'login_page')
+        self.data_url = self.cloudtrax_url + self.config.get('common', 'data_page')
+        self.user_url = self.cloudtrax_url + self.config.get('common', 'user_page')
+
         self.username = self.config.get(self.network, 'username')
         self.password = self.config.get(self.network, 'password')
 
     def login(self):
         """Method to login and create a web session"""
         self.session = session()
-        s = self.session.post(CLOUDTRAX_BASE + LOGIN_URL, 
+        s = self.session.post(self.login_url, 
                               data={'account': self.username,
                                     'password': self.password,
                                     'status': 'View Status'})
@@ -64,7 +64,7 @@ class CloudTrax:
         """Return network information scraped from CloudTrax"""
         self.network_status = []
 
-        self.request = self.session.get(CLOUDTRAX_BASE + DATA_URL,
+        self.request = self.session.get(self.data_url,
                                         params={'network': self.network,
                                                 'showall': '1',
                                                 'details': '1'})
