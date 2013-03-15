@@ -31,14 +31,16 @@ def render_table(data):
     """Render a text table representation of the data supplied"""
 
     gateway_table = texttable.Texttable()
-    gateway_table.header(['Name\n(Firmware)', 'Users', 'DL MB', 'UL MB', 'IP Address'])
+    gateway_table.header(['Name\n(Firmware)', 'Users', 'DL MB', 'UL MB', 
+                          'IP Address'])
 
     relay_table = texttable.Texttable()
-    relay_table.header(['Name\n(Firmware)', 'Users', 'DL MB', 'UL MB', 'Gateway', 
-                        'Latency\nHops'])
+    relay_table.header(['Name\n(Firmware)', 'Users', 'DL MB', 'UL MB', 
+                        'Gateway', 'Latency\n(Hops)'])
 
     spare_table = texttable.Texttable()
-    spare_table.header(['Name\n(Firmware)', 'Users', 'DL MB', 'UL MB', 'IP Address'])
+    spare_table.header(['Name\n(Firmware)', 'Users', 'DL MB', 'UL MB', 
+                        'IP Address'])
     omitted = 0
 
     for item in data:
@@ -56,7 +58,7 @@ def render_table(data):
                    item['download_24'], 
                    item['upload_24'], 
                    item['gateway_name'],
-                   item['latency'] + 'ms\n' + item['hops']]
+                   item['latency'] + 'ms\n(' + item['hops'] + ')']
 
             relay_table.add_row(row)
         elif item['type'] == TYPE['spare_gw_up'] or item['type'] == TYPE['spare_gw_down']:
@@ -90,6 +92,7 @@ class CloudTrax:
         """Constructor"""
         self.network = network
         self.network_status = []
+        self.user_status = []
 
         self.start_time = time()
 
@@ -147,6 +150,15 @@ class CloudTrax:
 
         return self.network_status
 
+    def get_user_status(self):
+        """Return network status"""
+        if len(self.user_status) == 0:
+            self.print_if_verbose('Refreshing user status from CloudTrax')
+
+            self.refresh_user_status()
+
+        return self.user_status
+
     def refresh_network_status(self):
         """Return network information scraped from CloudTrax"""
         self.network_status = []
@@ -195,10 +207,14 @@ class CloudTrax:
                                    'latency': raw_values[12][0]})
 
         else:
-            print_if_verbose('Request failed') 
+            self.print_if_verbose('Request failed') 
             exit(self.request.status_code)
 
         return self.network_status
+
+    def refresh_user_status(self):
+        """Return user information scraped from CloudTrax"""
+        pass
 
     def print_if_verbose(self, message):
         """Print the message to stdout if verbose output is requested"""
@@ -230,6 +246,7 @@ if args.network:
     cloudtrax.login()
 
     if args.screen:
+        print cloudtrax.get_user_status()
         print render_table(cloudtrax.get_network_status())
 
 else:
