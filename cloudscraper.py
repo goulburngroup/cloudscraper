@@ -20,7 +20,9 @@ TYPE = {'gw_down': '1',
         'gw_up': '3',
         'relay_up': '4',
         'spare_gw_down': '5',
-        'spare_gw_up': '7'}
+        'spare_down': '6',
+        'spare_gw_up': '7',
+        'spare_up': '8'}
 
 def underline(text):
     """Returns an underlined version of the text supplied"""
