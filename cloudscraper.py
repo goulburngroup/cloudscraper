@@ -66,7 +66,8 @@ def render_table(data):
                    item['latency'] + 'ms\n(' + item['hops'] + ')']
 
             relay_table.add_row(row)
-        elif item['type'] == TYPE['spare_gw_up'] or item['type'] == TYPE['spare_gw_down']:
+        elif item['type'] == TYPE['spare_gw_up'] or item['type'] == TYPE['spare_gw_down'] or item['type'] == TYPE['spare_up'] or item['type'] == TYPE['spare_down']:
+
             row = [item['name'] +'\n(' + item['fw_version'] + ')',
                    item['users_24'],
                    item['download_24'], 
@@ -96,34 +97,60 @@ class Node:
     def __init__(self, mac):
         """Constructor"""
         self.mac = mac
+        self.time_as_gw = 0
+        self.time_as_relay = 0
+        self.time_offline = 0
+
+        self.checkin_baseurl='https://www.cloudtrax.com/checkin-graph2.php?legend=0&mac='
+
+        self.scrape_checkin_data()
 
     def get_mac(self):
+        """Return the mac address of this node"""
         return self.mac
 
+    def get_time_offline(self):
+        """Return a float of the percent of time in 24hrs offline"""
+        return self.time_offline
+
+    def get_time_gw(self):
+        """Return a float of the percent of time in 24hrs online as a gateway node"""
+        return self.time_as_gw
+
+    def get_time_relay(self):
+        """Return a float of the percent of time in 24hrs online as a relay node"""
+        return self.time_as_relay
+
     def scrape_checkin_data(self):
-        url='http://www.cloudtrax.com/checkin-graph2.php?legend=0&mac='+self.mac
+        """Scrape checkin information on the current node"""
 
-        imgdata=urllib2.urlopen(url).read()
-        d = {}
+        imgdata = urllib2.urlopen(self.checkin_baseurl + self.mac).read()
 
-        im = Image.open(cStringIO.StringIO(imgdata))
+        self.colour_counter = {'cccccc': 0, '1faa5f': 0, '4fdd8f': 0}
 
-        print im.format, im.size, im.mode
+        self.checkin_img = Image.open(cStringIO.StringIO(imgdata))
+        self.checkin_img_width = self.checkin_img.size[0]
+        self.checkin_img_height = self.checkin_img.size[1]
 
-        ROW=1
+        ROW = 1
 
-        pixel = im.load()
-        for COL in range(0, im.size[0]):
-            p=str("%x%x%x" % (pixel[COL,ROW][0], pixel[COL,ROW][1], pixel[COL,ROW][2]))
+        pixelmap = self.checkin_img.load()
 
-            if p in d.keys():
-                d[p] += 1
+        for col in range(0, self.checkin_img_width):
+            pixel_colour = str("%x%x%x" % (pixelmap[col,ROW][0], pixelmap[col,ROW][1], pixelmap[col,ROW][2]))
+
+            if pixel_colour in self.colour_counter.keys() and pixel_colour != '000':
+                self.colour_counter[pixel_colour] += 1
             else:
-                d[p] = 1
+                self.colour_counter[pixel_colour] = 1
 
-            print COL
 
-        return d
+        # Convert number of pixels into a percent
+        self.time_as_gw = self.colour_counter['1faa5f'] / (self.checkin_img_width - 2) * 100
+        self.time_as_relay = self.colour_counter['4fdd8f'] / (self.checkin_img_width - 2) * 100
+        self.time_offline = self.colour_counter['cccccc'] / (self.checkin_img_width - 2) * 100
+
+        return self.colour_counter
 
 
 class CloudTrax:
@@ -134,6 +161,7 @@ class CloudTrax:
         self.network = network
         self.network_status = []
         self.user_status = []
+        self.nodes = []
 
         self.start_time = time()
 
@@ -191,6 +219,11 @@ class CloudTrax:
 
         return self.network_status
 
+    def get_nodes(self):
+        """Return a list of nodes"""
+
+        return self.nodes
+
     def get_user_status(self):
         """Return network status"""
         if len(self.user_status) == 0:
@@ -203,6 +236,7 @@ class CloudTrax:
     def refresh_network_status(self):
         """Return network information scraped from CloudTrax"""
         self.network_status = []
+        self.nodes = []
 
         parameters = {'network': self.network,
                       'showall': '1',
@@ -247,6 +281,9 @@ class CloudTrax:
                                    'hops': raw_values[11][0],
                                    'latency': raw_values[12][0]})
 
+                    # Create a new node object for each node in the network
+                    self.nodes.append([raw_values[2][0], Node(raw_values[2][0])])
+
         else:
             self.print_if_verbose('Request failed') 
             exit(self.request.status_code)
@@ -290,6 +327,8 @@ if args.network:
         print cloudtrax.get_user_status()
         print render_table(cloudtrax.get_network_status())
 
+        for node in cloudtrax.get_nodes():
+            print node[0], node[1].get_time_gw(), node[1].get_time_relay(), node[1].get_time_offline()
 else:
     parser.print_help()
     exit(1)
