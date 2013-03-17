@@ -9,9 +9,12 @@ dashboard (cloudtrax.com).
 from BeautifulSoup import BeautifulSoup
 from time import time
 import argparse
+import cStringIO
 import requests
 import texttable
+import urllib2
 import ConfigParser
+import Image
 
 CONFIG_FILE = 'cloudscraper.conf'
 
@@ -85,6 +88,42 @@ def render_table(data):
         render += 'Warning: There are ' + str(omitted) + ' Nodes that have been missed from this report\n'
 
     return render
+
+
+class Node:
+    """CloudTrax node class"""
+
+    def __init__(self, mac):
+        """Constructor"""
+        self.mac = mac
+
+    def get_mac(self):
+        return self.mac
+
+    def scrape_checkin_data(self):
+        url='http://www.cloudtrax.com/checkin-graph2.php?legend=0&mac='+self.mac
+
+        imgdata=urllib2.urlopen(url).read()
+        d = {}
+
+        im = Image.open(cStringIO.StringIO(imgdata))
+
+        print im.format, im.size, im.mode
+
+        ROW=1
+
+        pixel = im.load()
+        for COL in range(0, im.size[0]):
+            p=str("%x%x%x" % (pixel[COL,ROW][0], pixel[COL,ROW][1], pixel[COL,ROW][2]))
+
+            if p in d.keys():
+                d[p] += 1
+            else:
+                d[p] = 1
+
+            print COL
+
+        return d
 
 
 class CloudTrax:
