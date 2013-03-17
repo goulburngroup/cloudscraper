@@ -1,6 +1,7 @@
 [common]
 cloudtrax_url = https://cloudtrax.com/
 login_page = dashboard.php
+node_checkin_page = checkin-graph2.php
 data_page = nodes_attnt2.php
 user_page = users2.php
 
