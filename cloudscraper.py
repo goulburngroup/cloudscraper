@@ -329,7 +329,6 @@ if args.network:
     cloudtrax.login()
 
     if args.screen:
-        #cloudtrax.get_user_status()
         print cloudtrax.get_nodes()
         #print render_table(cloudtrax.get_network_status())
 
