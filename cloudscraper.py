@@ -94,9 +94,9 @@ def render_table(data):
 class Node:
     """CloudTrax node class"""
 
-    def __init__(self, mac):
+    def __init__(self, session, values):
         """Constructor"""
-        self.mac = mac
+        self.mac = values[2][0]
         self.time_as_gw = 0
         self.time_as_relay = 0
         self.time_offline = 0
@@ -282,7 +282,7 @@ class CloudTrax:
                                    'latency': raw_values[12][0]})
 
                     # Create a new node object for each node in the network
-                    self.nodes.append([raw_values[2][0], Node(raw_values[2][0])])
+                    self.nodes.append([raw_values[2][0], Node(self.session, raw_values)])
 
         else:
             self.print_if_verbose('Request failed') 
