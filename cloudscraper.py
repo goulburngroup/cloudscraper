@@ -357,8 +357,6 @@ if args.network:
         print '\n' + 'Spare nodes'
         print draw_node_table('spare', cloudtrax.get_nodes())
 
-        #for node in cloudtrax.get_nodes():
-            #print node[0], node[1].get_time_gw(), node[1].get_time_relay(), node[1].get_time_offline()
 else:
     parser.print_help()
     exit(1)
