@@ -18,14 +18,14 @@ import Image
 
 CONFIG_FILE = 'cloudscraper.conf'
 
-TYPE = {'gw_down': '1',
-        'relay_down': '2',
-        'gw_up': '3',
-        'relay_up': '4',
-        'spare_gw_down': '5',
-        'spare_down': '6',
-        'spare_gw_up': '7',
-        'spare_up': '8'}
+NODE_STATUS = {'gw_down': '1',
+               'relay_down': '2',
+               'gw_up': '3',
+               'relay_up': '4',
+               'spare_gw_down': '5',
+               'spare_down': '6',
+               'spare_gw_up': '7',
+               'spare_up': '8'}
 
 def underline(text):
     """Returns an underlined version of the text supplied"""
@@ -37,63 +37,35 @@ def print_if_verbose(message):
     if args.verbose:
         print timer.get_elapsed_time(), message
 
-def render_table(data):
-    """Render a text table representation of the data supplied"""
+def draw_node_table(node_type, nodes):
+    """Draws a text table representation of the data supplied"""
 
-    gateway_table = texttable.Texttable()
-    gateway_table.header(['Name\n(Firmware)', 'Users', 'DL MB', 'UL MB', 
-                          'IP Address'])
+    header = {'gateway': ['Name\n(Firmware)',
+                          'Users',
+                          'DL MB\nUL MB',
+                          'Up\n(Down)',
+                          'IP Address'],
+              'relay': ['Name\n(Firmware)',
+                        'Users',
+                        'DL MB\nUL MB',
+                        'Gateway',
+                        'Up\n(Down)',
+                        'Latency\n(Hops)'],
+              'spare': ['Name\n(Firmware)',
+                        'Users',
+                        'DL MB\nUL MB',
+                        'Up\n(Down)',
+                        'IP Address']}
 
-    relay_table = texttable.Texttable()
-    relay_table.header(['Name\n(Firmware)', 'Users', 'DL MB', 'UL MB', 
-                        'Gateway', 'Latency\n(Hops)'])
+    table = texttable.Texttable()
+    table.header(header[node_type])
 
-    spare_table = texttable.Texttable()
-    spare_table.header(['Name\n(Firmware)', 'Users', 'DL MB', 'UL MB', 
-                        'IP Address'])
-    omitted = 0
+    for node in nodes:
+        if node.get_node_type() == node_type:
+            table.add_row(node.get_table_row())
 
-    for item in data:
-        if item['type'] == TYPE['gw_up'] or item['type'] == TYPE['gw_down']:
-            row = [item['name'] +'\n(' + item['fw_version'] + ')',
-                   item['users_24'],
-                   item['download_24'], 
-                   item['upload_24'], 
-                   item['gateway_ip']]
 
-            gateway_table.add_row(row)
-        elif item['type'] == TYPE['relay_up'] or item['type'] == TYPE['relay_down']:
-            row = [item['name'] +'\n(' + item['fw_version'] + ')',
-                   item['users_24'],
-                   item['download_24'], 
-                   item['upload_24'], 
-                   item['gateway_name'],
-                   item['latency'] + 'ms\n(' + item['hops'] + ')']
-
-            relay_table.add_row(row)
-        elif item['type'] == TYPE['spare_gw_up'] or item['type'] == TYPE['spare_gw_down'] or item['type'] == TYPE['spare_up'] or item['type'] == TYPE['spare_down']:
-
-            row = [item['name'] +'\n(' + item['fw_version'] + ')',
-                   item['users_24'],
-                   item['download_24'], 
-                   item['upload_24'], 
-                   item['gateway_ip']]
-
-            spare_table.add_row(row)
-        else:
-            omitted += 1
-
-    render = underline('Usage for the last 24 hours')
-    render += '\n\n' 'Gateway nodes' + '\n'
-    render += gateway_table.draw() + '\n'
-    render += '\n\n' + 'Relay nodes' + '\n'
-    render += relay_table.draw() + '\n'
-    render += '\n\n' + 'Spare nodes' + '\n'
-    render += spare_table.draw() + '\n'
-    if omitted > 0:
-        render += 'Warning: There are ' + str(omitted) + ' Nodes that have been missed from this report\n'
-
-    return render
+    return table.draw()
 
 
 class Timer:
@@ -112,7 +84,30 @@ class Node:
     def __init__(self, session, values):
         """Constructor"""
         # TODO: time_since_last_checkin can be a 2 element array if down or late.
-        self.nodetype = values[0][0]
+        if values[0][0] == NODE_STATUS['gw_up']:
+            self.node_type = 'gateway'
+            self.node_status = 'up'
+        elif values[0][0] == NODE_STATUS['gw_down']:
+            self.node_type = 'gateway'
+            self.node_status = 'down'
+        elif values[0][0] == NODE_STATUS['relay_up']:
+            self.node_type = 'relay'
+            self.node_status = 'down'
+        elif values[0][0] == NODE_STATUS['relay_down']:
+            self.node_type = 'relay'
+            self.node_status = 'down'
+        elif values[0][0] == NODE_STATUS['spare_gw_up']:
+            self.node_type = 'spare'
+            self.node_status = 'up'
+        elif values[0][0] == NODE_STATUS['spare_gw_down']:
+            self.node_type = 'spare'
+            self.node_status = 'down'
+        elif values[0][0] == NODE_STATUS['spare_up']:
+            self.node_type = 'spare'
+            self.node_status = 'up'
+        elif values[0][0] == NODE_STATUS['spare_down']:
+            self.node_type = 'spare'
+            self.node_status = 'down'
         self.name = values[1][0]
         self.comment = values[1][-1]
         self.mac = values[2][0]
@@ -157,13 +152,37 @@ class Node:
         """Return a float of the percent of time in 24hrs online as a relay node"""
         return self.time_as_relay
 
+    def get_node_type(self):
+        """Return a string that describes the node type."""
+        return self.node_type
+
+    def get_table_row(self):
+        """Returns a list of items that match up to the screen text table for the node type"""
+
+        if self.node_type == 'gateway' or self.node_type == 'spare':
+            row = [self.name + '\n(' + self.fw_version + ')',
+                   self.users_24,
+                   self.download_24 + '\n(' + self.upload_24 + ')',
+                   str(self.time_as_gw) + '%\n(' + str(self.time_offline) + '%)',
+                   self.gateway_ip]
+
+        elif self.node_type == 'relay':
+            row = [self.name + '\n(' + self.fw_version + ')',
+                   self.users_24,
+                   self.download_24 + '\n(' + self.upload_24 + ')',
+                   self.gateway_name,
+                   str(self.time_as_relay) + '%\n(' + str(self.time_offline) + '%)',
+                   self.latency + 'ms\n(' + self.hops + ')']
+
+        return row
+
     def scrape_checkin_data(self, session):
         """Scrape checkin information on the current node"""
 
         #parameters = {'mac': self.mac,
                       #'legend': '0'}
 
-        #print_if_verbose('Requesting node checkin status')
+        print_if_verbose('Requesting node checkin status for ' + self.mac)
 
         #request = session.get(self.checkin_baseurl + self.mac, params=parameters)
 
@@ -293,7 +312,7 @@ class CloudTrax:
                 # Watch out for blank rows
                 if len(raw_values) > 0:
                     # Create a new node object for each node in the network
-                    self.nodes.append([raw_values[2][0], Node(self.session, raw_values)])
+                    self.nodes.append(Node(self.session, raw_values))
 
         else:
             print_if_verbose('Request failed') 
@@ -329,11 +348,17 @@ if args.network:
     cloudtrax.login()
 
     if args.screen:
-        print cloudtrax.get_nodes()
-        #print render_table(cloudtrax.get_network_status())
+        cloudtrax.get_nodes()
+        underline('Usage for the last 24 hours')
+        print '\n' + 'Gateway nodes'
+        print draw_node_table('gateway', cloudtrax.get_nodes())
+        print '\n' + 'Relay nodes'
+        print draw_node_table('relay', cloudtrax.get_nodes())
+        print '\n' + 'Spare nodes'
+        print draw_node_table('spare', cloudtrax.get_nodes())
 
-        for node in cloudtrax.get_nodes():
-            print node[0], node[1].get_time_gw(), node[1].get_time_relay(), node[1].get_time_offline()
+        #for node in cloudtrax.get_nodes():
+            #print node[0], node[1].get_time_gw(), node[1].get_time_relay(), node[1].get_time_offline()
 else:
     parser.print_help()
     exit(1)
