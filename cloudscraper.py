@@ -12,7 +12,6 @@ import argparse
 import cStringIO
 import requests
 import texttable
-import urllib2
 import ConfigParser
 import Image
 
@@ -132,7 +131,7 @@ class Node:
         self.time_as_relay = 0
         self.time_offline = 0
 
-        self.checkin_baseurl='https://www.cloudtrax.com/checkin-graph2.php?legend=0&mac='
+        self.checkin_baseurl = 'https://www.cloudtrax.com/checkin-graph2.php?legend=0&mac='
 
         self.scrape_checkin_data(session)
 
@@ -179,18 +178,16 @@ class Node:
     def scrape_checkin_data(self, session):
         """Scrape checkin information on the current node"""
 
-        #parameters = {'mac': self.mac,
-                      #'legend': '0'}
+        parameters = {'mac': self.mac,
+                      'legend': '0'}
 
         print_if_verbose('Requesting node checkin status for ' + self.mac)
 
-        #request = session.get(self.checkin_baseurl + self.mac, params=parameters)
-
-        imgdata = urllib2.urlopen(self.checkin_baseurl + self.mac).read()
+        request = session.get(self.checkin_baseurl + self.mac, params=parameters)
 
         self.colour_counter = {'cccccc': 0, '1faa5f': 0, '4fdd8f': 0}
 
-        self.checkin_img = Image.open(cStringIO.StringIO(imgdata))
+        self.checkin_img = Image.open(cStringIO.StringIO(request.content))
         self.checkin_img_width = self.checkin_img.size[0]
         self.checkin_img_height = self.checkin_img.size[1]
 
@@ -199,7 +196,7 @@ class Node:
         pixelmap = self.checkin_img.load()
 
         for col in range(0, self.checkin_img_width):
-            pixel_colour = str("%x%x%x" % (pixelmap[col,ROW][0], pixelmap[col,ROW][1], pixelmap[col,ROW][2]))
+            pixel_colour = str("%x%x%x" % (pixelmap[col, ROW][0], pixelmap[col, ROW][1], pixelmap[col, ROW][2]))
 
             if pixel_colour in self.colour_counter.keys() and pixel_colour != '000':
                 self.colour_counter[pixel_colour] += 1
