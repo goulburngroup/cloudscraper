@@ -80,7 +80,7 @@ class Timer:
 class Node:
     """CloudTrax node class"""
 
-    def __init__(self, session, values):
+    def __init__(self, session, values, checkin_url):
         """Constructor"""
         # TODO: time_since_last_checkin can be a 2 element array if down or late.
         if values[0][0] == NODE_STATUS['gw_up']:
@@ -131,7 +131,7 @@ class Node:
         self.time_as_relay = 0
         self.time_offline = 0
 
-        self.checkin_baseurl = 'https://www.cloudtrax.com/checkin-graph2.php?legend=0&mac='
+        self.checkin_url = checkin_url
 
         self.scrape_checkin_data(session)
 
@@ -183,7 +183,7 @@ class Node:
 
         print_if_verbose('Requesting node checkin status for ' + self.mac)
 
-        request = session.get(self.checkin_baseurl + self.mac, params=parameters)
+        request = session.get(self.checkin_url, params=parameters)
 
         self.colour_counter = {'cccccc': 0, '1faa5f': 0, '4fdd8f': 0}
 
@@ -230,6 +230,7 @@ class CloudTrax:
         self.login_url = self.cloudtrax_url + self.config.get('common', 'login_page')
         self.data_url = self.cloudtrax_url + self.config.get('common', 'data_page')
         self.user_url = self.cloudtrax_url + self.config.get('common', 'user_page')
+        self.checkin_url = self.cloudtrax_url + self.config.get('common', 'node_checkin_page')
 
         self.username = self.config.get(self.network, 'username')
         self.password = self.config.get(self.network, 'password')
@@ -309,7 +310,7 @@ class CloudTrax:
                 # Watch out for blank rows
                 if len(raw_values) > 0:
                     # Create a new node object for each node in the network
-                    self.nodes.append(Node(self.session, raw_values))
+                    self.nodes.append(Node(self.session, raw_values, self.checkin_url))
 
         else:
             print_if_verbose('Request failed') 
