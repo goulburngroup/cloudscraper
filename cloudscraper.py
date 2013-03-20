@@ -475,7 +475,7 @@ if args.network:
         # Send the message via our own SMTP server, but don't include the
         # envelope header.
         s = smtplib.SMTP(email_server)
-        s.sendmail(email_from, [email_to], email.as_string())
+        s.sendmail(email_from, email_to.split(), email.as_string())
         s.quit()
 
     if args.file:
