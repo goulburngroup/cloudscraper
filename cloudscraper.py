@@ -250,10 +250,18 @@ class User:
         row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
                self.values['node_name'] + '\n(' + self.values['node_mac'] + ')',
                self.values['blocked'],
-               self.values['kb_down'],
-               self.values['kb_up']]
+               str(self.get_dl_usage()),
+               str(self.get_ul_usage())]
 
         return row
+
+    def get_dl_usage(self):
+        """Returns an float with the number of MB downloaded in the past 24hrs"""
+        return '%.2f' % (float(self.values['kb_down']) / 1000)
+
+    def get_ul_usage(self):
+        """Returns an float with the number of MB uploaded in the past 24hrs"""
+        return '%.2f' % float(self.values['kb_up']) / 1000)
 
 
 class CloudTrax:
