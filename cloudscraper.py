@@ -55,22 +55,22 @@ def distill_html(content, element, identifier):
 def draw_table(entity_type, entities):
     """Draws a text table representation of the data supplied"""
 
-    header = {'gateway': ['Name\n(Firmware)',
+    header = {'gateway': ['Name\n(mac)',
                           'Users',
                           'DL MB\nUL MB',
                           'Up\n(Down)',
-                          'IP Address'],
-              'relay': ['Name\n(Firmware)',
+                          'IP Address\n(Firmware)'],
+              'relay': ['Name\n(mac)',
                         'Users',
                         'DL MB\nUL MB',
-                        'Gateway',
+                        'Gateway\n(Firmware)',
                         'Up\n(Down)',
                         'Latency\n(Hops)'],
-              'spare': ['Name\n(Firmware)',
+              'spare': ['Name\n(mac)',
                         'Users',
                         'DL MB\nUL MB',
                         'Up\n(Down)',
-                        'IP Address'],
+                        'IP Address\n(Firmware)'],
               'user': ['Name\n(mac)',
                        'Last seen on',
                        'Blocked',
@@ -306,17 +306,17 @@ class Node:
         """Returns a list of items that match up to the screen text table for the node type"""
 
         if self.node_type == 'gateway' or self.node_type == 'spare':
-            row = [self.name + '\n(' + self.fw_version + ')',
+            row = [self.name + '\n(' + self.mac + ')',
                    self.users_24,
                    self.download_24 + '\n(' + self.upload_24 + ')',
                    str(self.time_as_gw) + '%\n(' + str(self.time_offline) + '%)',
-                   self.gateway_ip]
+                   self.gateway_ip + '\n(' + self.fw_version + ')']
 
         elif self.node_type == 'relay':
-            row = [self.name + '\n(' + self.fw_version + ')',
+            row = [self.name + '\n(' + self.mac+ ')',
                    self.users_24,
                    self.download_24 + '\n(' + self.upload_24 + ')',
-                   self.gateway_name,
+                   self.gateway_name + '\n(' + self.fw_version + ')',
                    str(self.time_as_relay) + '%\n(' + str(self.time_offline) + '%)',
                    self.latency + 'ms\n(' + self.hops + ')']
 
