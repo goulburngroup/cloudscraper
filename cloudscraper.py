@@ -462,9 +462,11 @@ if args.network:
         msg += '\n\nUsers\n' + draw_table('user', cloudtrax.get_users())
 
     if args.screen:
+        print_if_verbose('Processing screen output')
         print msg
 
     if args.email:
+        print_if_verbose('Processing email output')
         email = MIMEText('<pre>' + msg + '</pre>', 'html')
         email['Subject'] = email_subject
         email['From'] = email_from
@@ -475,6 +477,12 @@ if args.network:
         s = smtplib.SMTP(email_server)
         s.sendmail(email_from, [email_to], email.as_string())
         s.quit()
+
+    if args.file:
+        print_if_verbose('Processing file output')
+        fileout = open(args.file[0], 'w')
+        fileout.write(msg)
+        fileout.close()
 
 else:
     parser.print_help()
