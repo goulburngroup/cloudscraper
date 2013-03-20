@@ -151,6 +151,42 @@ class CloudTrax:
 
         return self.session
 
+    def get_checkin_data(self, node_mac):
+        """Scrape checkin information on the current node"""
+
+        parameters = {'mac': node_mac,
+                      'legend': '0'}
+
+        print_if_verbose('Requesting node checkin status for ' + node_mac)
+
+        request = self.session.get(self.checkin_url, params=parameters)
+
+        self.colour_counter = {'cccccc': 0, '1faa5f': 0, '4fdd8f': 0}
+
+        self.checkin_img = Image.open(cStringIO.StringIO(request.content))
+        self.checkin_img_width = self.checkin_img.size[0]
+        self.checkin_img_height = self.checkin_img.size[1]
+
+        ROW = 1
+
+        pixelmap = self.checkin_img.load()
+
+        for col in range(0, self.checkin_img_width):
+            pixel_colour = str("%x%x%x" % (pixelmap[col, ROW][0], pixelmap[col, ROW][1], pixelmap[col, ROW][2]))
+
+            if pixel_colour in self.colour_counter.keys() and pixel_colour != '000':
+                self.colour_counter[pixel_colour] += 1
+            else:
+                self.colour_counter[pixel_colour] = 1
+
+
+        # Convert number of pixels into a percent
+        time_as_gw = self.colour_counter['1faa5f'] / (self.checkin_img_width - 2) * 100
+        time_as_relay = self.colour_counter['4fdd8f'] / (self.checkin_img_width - 2) * 100
+        time_offline = self.colour_counter['cccccc'] / (self.checkin_img_width - 2) * 100
+
+        return (time_as_gw, time_as_relay, time_offline)
+
     def get_session(self):
         """Return session id"""
         return self.session
@@ -193,7 +229,7 @@ class CloudTrax:
 
         if self.request.status_code == 200:
             for raw_values in distill_html(self.request.content, 'table', {'id': 'mytable'}):
-                self.nodes.append(Node(self.session, raw_values, self.checkin_url))
+                self.nodes.append(Node(raw_values, self.get_checkin_data(raw_values[2][0])))
 
         else:
             print_if_verbose('Request failed') 
@@ -227,7 +263,7 @@ class CloudTrax:
 
 class Node:
     """CloudTrax node class"""
-    def __init__(self, session, values, checkin_url):
+    def __init__(self, values, checkin_data):
         """Constructor"""
         # TODO: time_since_last_checkin can be a 2 element array if down or late.
         if values[0][0] == NODE_STATUS['gw_up']:
@@ -274,13 +310,7 @@ class Node:
         self.hops = values[11][0]
         self.latency = values[12][0]
 
-        self.time_as_gw = 0
-        self.time_as_relay = 0
-        self.time_offline = 0
-
-        self.checkin_url = checkin_url
-
-        self.scrape_checkin_data(session)
+        self.checkin_data = checkin_data
 
     def get_mac(self):
         """Return the mac address of this node"""
@@ -288,15 +318,15 @@ class Node:
 
     def get_time_offline(self):
         """Return a float of the percent of time in 24hrs offline"""
-        return self.time_offline
+        return self.checkin_data[2]
 
     def get_time_gw(self):
         """Return a float of the percent of time in 24hrs online as a gateway node"""
-        return self.time_as_gw
+        return self.checkin_data[0]
 
     def get_time_relay(self):
         """Return a float of the percent of time in 24hrs online as a relay node"""
-        return self.time_as_relay
+        return self.checkin_data[1]
 
     def get_type(self):
         """Return a string that describes the node type."""
@@ -309,7 +339,7 @@ class Node:
             row = [self.name + '\n(' + self.mac + ')',
                    self.users_24,
                    self.download_24 + '\n(' + self.upload_24 + ')',
-                   str(self.time_as_gw) + '%\n(' + str(self.time_offline) + '%)',
+                   str(self.checkin_data[0]) + '%\n(' + str(self.checkin_data[2]) + '%)',
                    self.gateway_ip + '\n(' + self.fw_version + ')']
 
         elif self.node_type == 'relay':
@@ -317,46 +347,10 @@ class Node:
                    self.users_24,
                    self.download_24 + '\n(' + self.upload_24 + ')',
                    self.gateway_name + '\n(' + self.fw_version + ')',
-                   str(self.time_as_relay) + '%\n(' + str(self.time_offline) + '%)',
+                   str(self.checkin_data[1]) + '%\n(' + str(self.checkin_data[2]) + '%)',
                    self.latency + 'ms\n(' + self.hops + ')']
 
         return row
-
-    def scrape_checkin_data(self, session):
-        """Scrape checkin information on the current node"""
-
-        parameters = {'mac': self.mac,
-                      'legend': '0'}
-
-        print_if_verbose('Requesting node checkin status for ' + self.mac)
-
-        request = session.get(self.checkin_url, params=parameters)
-
-        self.colour_counter = {'cccccc': 0, '1faa5f': 0, '4fdd8f': 0}
-
-        self.checkin_img = Image.open(cStringIO.StringIO(request.content))
-        self.checkin_img_width = self.checkin_img.size[0]
-        self.checkin_img_height = self.checkin_img.size[1]
-
-        ROW = 1
-
-        pixelmap = self.checkin_img.load()
-
-        for col in range(0, self.checkin_img_width):
-            pixel_colour = str("%x%x%x" % (pixelmap[col, ROW][0], pixelmap[col, ROW][1], pixelmap[col, ROW][2]))
-
-            if pixel_colour in self.colour_counter.keys() and pixel_colour != '000':
-                self.colour_counter[pixel_colour] += 1
-            else:
-                self.colour_counter[pixel_colour] = 1
-
-
-        # Convert number of pixels into a percent
-        self.time_as_gw = self.colour_counter['1faa5f'] / (self.checkin_img_width - 2) * 100
-        self.time_as_relay = self.colour_counter['4fdd8f'] / (self.checkin_img_width - 2) * 100
-        self.time_offline = self.colour_counter['cccccc'] / (self.checkin_img_width - 2) * 100
-
-        return self.colour_counter
 
 
 class Timer:
