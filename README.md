@@ -3,6 +3,31 @@ cloudscraper
 
 Tools to archive usage data and graphs from CloudTrax Dashboard (www.cloudtrax.com)
 
+Installation
+============
+
+Dependencies
+------------
+
+CloudScraper is written in Python. It is tested and known working on Python 2.7
+
+Modules
+- Beautiful Soup - HTML parser
+- ConfigObj - Config file reader
+- PIL - Python Imaging Library to read and decode images
+- Requests - HTTP library
+- Texttable - Simple text table formatting library
+
+Debian/Ubuntu
+-------------
+
+You should already have Python installed, but you will need to install some modules
+
+> apt-get install python-beautifulsoup python-configobj python-imaging python-pip \
+                  python-requests 
+> pip install texttable
+
+
 
 CloudTrax notes
 ===============
