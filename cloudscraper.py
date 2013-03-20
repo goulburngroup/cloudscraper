@@ -187,13 +187,12 @@ class CloudTrax:
             else:
                 self.colour_counter[pixel_colour] = 1
 
-
         # Convert number of pixels into a percent
-        time_as_gw = self.colour_counter['1faa5f'] / (self.checkin_img_width - 2) * 100
-        time_as_relay = self.colour_counter['4fdd8f'] / (self.checkin_img_width - 2) * 100
-        time_offline = self.colour_counter['cccccc'] / (self.checkin_img_width - 2) * 100
+        time_as_gw = (self.colour_counter['1faa5f'] * 100) / (self.checkin_img_width - 2)
+        time_as_relay = (self.colour_counter['4fdd8f'] * 100) / (self.checkin_img_width - 2)
+        time_offline = (self.colour_counter['cccccc'] * 100) / (self.checkin_img_width - 2)
 
-        return (time_as_gw, time_as_relay, time_offline)
+        return (time_as_gw, time_as_relay)
 
     def get_session(self):
         """Return session id"""
@@ -347,15 +346,15 @@ class Node:
             row = [self.name + '\n(' + self.mac + ')',
                    self.users_24,
                    self.download_24 + '\n(' + self.upload_24 + ')',
-                   str(100 - self.checkin_data[2]) + '%\n(' + str(self.checkin_data[2]) + '%)',
+                   str(self.checkin_data[0]) + '%\n(' + str(100 - self.checkin_data[0]) + '%)',
                    self.gateway_ip + '\n(' + self.fw_version + ')']
 
         elif self.node_type == 'relay':
-            row = [self.name + '\n(' + self.mac+ ')',
+            row = [self.name + '\n(' + self.mac + ')',
                    self.users_24,
                    self.download_24 + '\n(' + self.upload_24 + ')',
                    self.gateway_name + '\n(' + self.fw_version + ')',
-                   str(self.checkin_data[1]) + '%\n(' + str(self.checkin_data[2]) + '%)',
+                   str(self.checkin_data[1]) + '%\n(' + str(100 - self.checkin_data[1]) + '%)',
                    self.latency + 'ms\n(' + self.hops + ')']
 
         return row
