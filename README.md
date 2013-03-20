@@ -19,11 +19,8 @@ Debian/Ubuntu
 
 You should already have Python installed, but you will need to install some modules
 
-    apt-get install python-beautifulsoup
-    apt-get install python-configobj
-    apt-get install python-imaging
-    apt-get install python-pip
-    apt-get install python-requests 
+    apt-get install python-beautifulsoup python-configobj python-imaging
+    apt-get install python-mailer python-pip python-requests 
     pip install texttable
 
 
