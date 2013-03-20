@@ -36,7 +36,7 @@ def print_if_verbose(message):
     if args.verbose:
         print timer.get_elapsed_time(), message
 
-def draw_node_table(node_type, nodes):
+def draw_table(entity_type, entities):
     """Draws a text table representation of the data supplied"""
 
     header = {'gateway': ['Name\n(Firmware)',
@@ -54,14 +54,19 @@ def draw_node_table(node_type, nodes):
                         'Users',
                         'DL MB\nUL MB',
                         'Up\n(Down)',
-                        'IP Address']}
+                        'IP Address'],
+              'user': ['Name\n(mac)',
+                       'Last seen on',
+                       'Blocked',
+                       'MB Down',
+                       'MB Up']}
 
     table = texttable.Texttable()
-    table.header(header[node_type])
+    table.header(header[entity_type])
 
-    for node in nodes:
-        if node.get_node_type() == node_type:
-            table.add_row(node.get_table_row())
+    for entity in entities:
+        if entity.get_type() == entity_type:
+            table.add_row(entity.get_table_row())
 
 
     return table.draw()
@@ -151,7 +156,7 @@ class Node:
         """Return a float of the percent of time in 24hrs online as a relay node"""
         return self.time_as_relay
 
-    def get_node_type(self):
+    def get_type(self):
         """Return a string that describes the node type."""
         return self.node_type
 
@@ -217,7 +222,6 @@ class User:
 
     def __init__(self, values):
         """Constructor"""
-        print values
         self.values = {'name': values[0][0],
                        'mac': values[0][-1],
                        'node_name': values[1][0],
@@ -225,16 +229,31 @@ class User:
                        'rssi': values[3][0],
                        'rate': values[4][0],
                        'MCS': values[4][1],
-                       'kb_down': values[5][0],
-                       'kb_up': values[6][0],
+                       'kb_down': values[5][0].replace(',', ''),
+                       'kb_up': values[6][0].replace(',', ''),
                        'blocked': values[8][0]}
                        #'device_vendor': values[2]}
 
         print_if_verbose('Creating user object for ' + self.values['mac'])
 
+    def get_type(self):
+        """Return a string that describes the object type."""
+        return 'user'
+
     def get_values(self):
         """Returns a bunch of values"""
         return self.values
+
+    def get_table_row(self):
+        """Returns a list of items to include in the user screen text table"""
+
+        row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
+               self.values['node_name'] + '\n(' + self.values['node_mac'] + ')',
+               self.values['blocked'],
+               self.values['kb_down'],
+               self.values['kb_up']]
+
+        return row
 
 
 class CloudTrax:
@@ -406,16 +425,16 @@ if args.network:
 
     if args.screen:
         cloudtrax.get_nodes()
+        cloudtrax.get_users()
         underline('Usage for the last 24 hours')
         print '\n' + 'Gateway nodes'
-        print draw_node_table('gateway', cloudtrax.get_nodes())
+        print draw_table('gateway', cloudtrax.get_nodes())
         print '\n' + 'Relay nodes'
-        print draw_node_table('relay', cloudtrax.get_nodes())
+        print draw_table('relay', cloudtrax.get_nodes())
         print '\n' + 'Spare nodes'
-        print draw_node_table('spare', cloudtrax.get_nodes())
-
-        for user in cloudtrax.get_users():
-            print user.get_values()
+        print draw_table('spare', cloudtrax.get_nodes())
+        print '\n' + 'Users'
+        print draw_table('user', cloudtrax.get_users())
 
 else:
     parser.print_help()
