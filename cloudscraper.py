@@ -26,15 +26,31 @@ NODE_STATUS = {'gw_down': '1',
                'spare_gw_up': '7',
                'spare_up': '8'}
 
-def underline(text):
-    """Returns an underlined version of the text supplied"""
 
-    return text + '\n' + (len(text) * '-') + '\n'
+#
+# Helper functions
+#
 
-def print_if_verbose(message):
-    """Print the message to stdout if verbose output is requested"""
-    if args.verbose:
-        print timer.get_elapsed_time(), message
+def distill_html(content, element, identifier):
+    distilled_text = []
+    
+    """Accept some HTML and return the filtered output"""
+    if element == 'table':
+        distilled_table = BeautifulSoup(content).find(element, identifier)
+
+        for row in distilled_table.findAll('tr'):
+            raw_values = []
+
+            for cell in row.findAll('td'):
+                raw_values.append(cell.findAll(text=True))
+
+            # Watch out for blank rows
+            if len(raw_values) > 0:
+                # Create a new node object for each node in the network
+                distilled_text.append(raw_values)
+
+    return distilled_text
+
 
 def draw_table(entity_type, entities):
     """Draws a text table representation of the data supplied"""
@@ -71,40 +87,146 @@ def draw_table(entity_type, entities):
 
     return table.draw()
 
-def distill_html(content, element, identifier):
-    distilled_text = []
+
+def print_if_verbose(message):
+    """Print the message to stdout if verbose output is requested"""
+    if args.verbose:
+        print timer.get_elapsed_time(), message
+
+
+def underline(text):
+    """Returns an underlined version of the text supplied"""
+
+    return text + '\n' + (len(text) * '-') + '\n'
+
+
+#
+# Objects
+#
+
+class CloudTrax:
+    """CloudTrax connector class"""
+
+    def __init__(self, network, verbose):
+        """Constructor"""
+        self.network = network
+        self.nodes = []
+        self.users = []
+
+        self.verbose = verbose
+        print_if_verbose('Verbose output is turned on')
+
+        self.config = ConfigParser.RawConfigParser()
+        self.config.read(CONFIG_FILE)
+
+        self.cloudtrax_url = self.config.get('common', 'cloudtrax_url')
+        self.login_url = self.cloudtrax_url + self.config.get('common', 'login_page')
+        self.data_url = self.cloudtrax_url + self.config.get('common', 'data_page')
+        self.user_url = self.cloudtrax_url + self.config.get('common', 'user_page')
+        self.checkin_url = self.cloudtrax_url + self.config.get('common', 'node_checkin_page')
+
+        self.username = self.config.get(self.network, 'username')
+        self.password = self.config.get(self.network, 'password')
+
+    def login(self):
+        """Method to login and create a web session"""
+        self.session = requests.session()
+
+        print_if_verbose('Logging in to CloudTrax Dashboard')
+
+        parameters = {'account': self.username,
+                      'password': self.password,
+                      'status': 'View Status'}
+
+        try:
+            s = self.session.post(self.login_url, data=parameters)
+            s.raise_for_status()
+
+        except requests.exceptions.HTTPError:
+            print_if_verbose('There was a HTTP error')
+            exit(1)
+        except requests.exceptions.ConnectionError:
+            print_if_verbose('There was a connection error')
+            exit(1)
+
+        return self.session
+
+    def get_session(self):
+        """Return session id"""
+        return self.session
+
+    def get_request(self):
+        """Return request id"""
+        return self.request
+
+    def get_nodes(self):
+        """Return a list of nodes"""
+
+        # Refresh the network status if the nodes list is empty
+        if len(self.nodes) == 0:
+            print_if_verbose('Refreshing node status from CloudTrax')
+            self.refresh_network_status()
+
+        return self.nodes
+
+    def get_users(self):
+        """Return network status"""
+        if len(self.users) == 0:
+            print_if_verbose('Refreshing user statistics from CloudTrax')
+            self.refresh_users()
+
+        return self.users
+
+    def refresh_network_status(self):
+        """Return network information scraped from CloudTrax"""
+        self.nodes = []
+
+        parameters = {'network': self.network,
+                      'showall': '1',
+                      'details': '1'}
     
-    """Accept some HTML and return the filtered output"""
-    if element == 'table':
-        distilled_table = BeautifulSoup(content).find(element, identifier)
+        print_if_verbose('Requesting network status') 
 
-        for row in distilled_table.findAll('tr'):
-            raw_values = []
+        self.request = self.session.get(self.data_url, params=parameters)
 
-            for cell in row.findAll('td'):
-                raw_values.append(cell.findAll(text=True))
+        print_if_verbose('Received network status ok') 
 
-            # Watch out for blank rows
-            if len(raw_values) > 0:
-                # Create a new node object for each node in the network
-                distilled_text.append(raw_values)
+        if self.request.status_code == 200:
+            for raw_values in distill_html(self.request.content, 'table', {'id': 'mytable'}):
+                self.nodes.append(Node(self.session, raw_values, self.checkin_url))
 
-    return distilled_text
+        else:
+            print_if_verbose('Request failed') 
+            exit(self.request.status_code)
+
+        return self.nodes
+
+    def refresh_users(self):
+        """Return a list of wifi user statistics scraped from CloudTrax"""
+        self.users = []
+
+        parameters = {'network': self.network}
+    
+        print_if_verbose('Requesting user statistics') 
+
+        self.request = self.session.get(self.user_url, params=parameters)
+
+        print_if_verbose('Received user statistics ok') 
 
 
-class Timer:
-    """Universal stopwatch class"""
-    def __init__(self):
-        # Start the clock
-        self.start_time = time()
+        if self.request.status_code == 200:
+            for raw_values in distill_html(self.request.content, 'table', {'class': 'inline sortable'}):
+                self.users.append(User(raw_values))
 
-    def get_elapsed_time(self):
-        """Returns the number of seconds elapsed"""
-        return "%.2f" % (time() - self.start_time)
+        else:
+            print_if_verbose('Request failed') 
+            exit(self.request.status_code)
+
+        return self.users
+
 
 class Node:
     """CloudTrax node class"""
-
     def __init__(self, session, values, checkin_url):
         """Constructor"""
         # TODO: time_since_last_checkin can be a 2 element array if down or late.
@@ -237,6 +359,17 @@ class Node:
         return self.colour_counter
 
 
+class Timer:
+    """Universal stopwatch class"""
+    def __init__(self):
+        # Start the clock
+        self.start_time = time()
+
+    def get_elapsed_time(self):
+        """Returns the number of seconds elapsed"""
+        return "%.2f" % (time() - self.start_time)
+
+
 class User:
     """Wifi user class"""
 
@@ -284,144 +417,27 @@ class User:
         return '%.2f' % (float(self.values['kb_up']) / 1000)
 
 
-class CloudTrax:
-    """CloudTrax connector class"""
-
-    def __init__(self, network, verbose):
-        """Constructor"""
-        self.network = network
-        self.nodes = []
-        self.users = []
-
-        self.verbose = verbose
-        print_if_verbose('Verbose output is turned on')
-
-        self.config = ConfigParser.RawConfigParser()
-        self.config.read(CONFIG_FILE)
-
-        self.cloudtrax_url = self.config.get('common', 'cloudtrax_url')
-        self.login_url = self.cloudtrax_url + self.config.get('common', 'login_page')
-        self.data_url = self.cloudtrax_url + self.config.get('common', 'data_page')
-        self.user_url = self.cloudtrax_url + self.config.get('common', 'user_page')
-        self.checkin_url = self.cloudtrax_url + self.config.get('common', 'node_checkin_page')
-
-        self.username = self.config.get(self.network, 'username')
-        self.password = self.config.get(self.network, 'password')
-
-    def login(self):
-        """Method to login and create a web session"""
-        self.session = requests.session()
-
-        print_if_verbose('Logging in to CloudTrax Dashboard')
-
-        parameters = {'account': self.username,
-                      'password': self.password,
-                      'status': 'View Status'}
-
-        try:
-            s = self.session.post(self.login_url, data=parameters)
-            s.raise_for_status()
-
-        except requests.exceptions.HTTPError:
-            print_if_verbose('There was a HTTP error')
-            exit(1)
-        except requests.exceptions.ConnectionError:
-            print_if_verbose('There was a connection error')
-            exit(1)
-
-        return self.session
-
-    def get_session(self):
-        """Return session id"""
-        return self.session
-
-    def get_request(self):
-        """Return request id"""
-        return self.request
-
-    def get_nodes(self):
-        """Return a list of nodes"""
-
-        # Refresh the network status if the nodes list is empty
-        if len(self.nodes) == 0:
-            print_if_verbose('Refreshing node status from CloudTrax')
-            self.refresh_network_status()
-
-        return self.nodes
-
-    def get_users(self):
-        """Return network status"""
-        if len(self.users) == 0:
-            print_if_verbose('Refreshing user statistics from CloudTrax')
-            self.refresh_users()
-
-        return self.users
-
-    def refresh_network_status(self):
-        """Return network information scraped from CloudTrax"""
-        self.nodes = []
-
-        parameters = {'network': self.network,
-                      'showall': '1',
-                      'details': '1'}
-    
-        print_if_verbose('Requesting network status') 
-
-        self.request = self.session.get(self.data_url, params=parameters)
-
-        print_if_verbose('Received network status ok') 
-
-        if self.request.status_code == 200:
-            for raw_values in distill_html(self.request.content, 'table', {'id': 'mytable'}):
-                self.nodes.append(Node(self.session, raw_values, self.checkin_url))
-
-        else:
-            print_if_verbose('Request failed') 
-            exit(self.request.status_code)
-
-        return self.nodes
-
-    def refresh_users(self):
-        """Return a list of wifi user statistics scraped from CloudTrax"""
-        self.users = []
-
-        parameters = {'network': self.network}
-    
-        print_if_verbose('Requesting user statistics') 
-
-        self.request = self.session.get(self.user_url, params=parameters)
-
-        print_if_verbose('Received user statistics ok') 
-
-
-        if self.request.status_code == 200:
-            for raw_values in distill_html(self.request.content, 'table', {'class': 'inline sortable'}):
-                self.users.append(User(raw_values))
-
-        else:
-            print_if_verbose('Request failed') 
-            exit(self.request.status_code)
-
-        return self.users
 
 
 #
 # Program starts here!
 #
 
-parser = argparse.ArgumentParser(description='Statistics scraper for the CloudTrax controller')
-parser.add_argument('-n', '--network', nargs=1, 
-                    help='The wifi network name on CloudTrax')
-parser.add_argument('-f', '--file', nargs=1, 
-                    help='Store the output to a file')
-parser.add_argument('-d', '--database', nargs=1, 
-                    help='Store the output to a database')
-parser.add_argument('-s', '--screen', action='store_true', default=False, 
-                    help='Display the output to stdout')
-parser.add_argument('-v', '--verbose', action='store_true', default=False, 
-                    help='Be Verbose')
-parser.add_argument('-N', '--network-status', help='Get the network status')
-parser.add_argument('-U', '--usage-stats', help='Get the usage statistics')
+parser = argparse.ArgumentParser(description = 'Statistics scraper for the CloudTrax controller')
+parser.add_argument('-n', '--network', nargs = 1, 
+                    help = 'The wifi network name on CloudTrax')
+parser.add_argument('-f', '--file', nargs = 1, 
+                    help = 'Store the output to a file')
+parser.add_argument('-d', '--database', nargs = 1, 
+                    help = 'Store the output to a database')
+parser.add_argument('-s', '--screen', action = 'store_true', default = False, 
+                    help = 'Display the output to stdout')
+parser.add_argument('-v', '--verbose', action = 'store_true', default = False, 
+                    help = 'Be Verbose')
+parser.add_argument('-N', '--network-status', action = 'store_true', default = False,
+                    help = 'Get the network status')
+parser.add_argument('-U', '--usage', action = 'store_true', default = False,
+                    help = 'Get the usage statistics')
 args = parser.parse_args()
 
 if args.verbose:
@@ -431,18 +447,22 @@ if args.network:
     cloudtrax = CloudTrax(args.network[0], args.verbose)
     cloudtrax.login()
 
-    if args.screen:
-        cloudtrax.get_nodes()
-        cloudtrax.get_users()
-        underline('Usage for the last 24 hours')
-        print '\n' + 'Gateway nodes'
-        print draw_table('gateway', cloudtrax.get_nodes())
-        print '\n' + 'Relay nodes'
-        print draw_table('relay', cloudtrax.get_nodes())
-        print '\n' + 'Spare nodes'
-        print draw_table('spare', cloudtrax.get_nodes())
-        print '\n' + 'Users'
-        print draw_table('user', cloudtrax.get_users())
+    if args.network_status:
+        if args.screen:
+            cloudtrax.get_nodes()
+            underline('Usage for the last 24 hours')
+            print '\n' + 'Gateway nodes'
+            print draw_table('gateway', cloudtrax.get_nodes())
+            print '\n' + 'Relay nodes'
+            print draw_table('relay', cloudtrax.get_nodes())
+            print '\n' + 'Spare nodes'
+            print draw_table('spare', cloudtrax.get_nodes())
+
+    if args.usage:
+        if args.screen:
+            cloudtrax.get_users()
+            print '\n' + 'Users'
+            print draw_table('user', cloudtrax.get_users())
 
 else:
     parser.print_help()
