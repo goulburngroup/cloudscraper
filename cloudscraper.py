@@ -339,7 +339,7 @@ class Node:
             row = [self.name + '\n(' + self.mac + ')',
                    self.users_24,
                    self.download_24 + '\n(' + self.upload_24 + ')',
-                   str(self.checkin_data[0]) + '%\n(' + str(self.checkin_data[2]) + '%)',
+                   str(100 - self.checkin_data[2]) + '%\n(' + str(self.checkin_data[2]) + '%)',
                    self.gateway_ip + '\n(' + self.fw_version + ')']
 
         elif self.node_type == 'relay':
