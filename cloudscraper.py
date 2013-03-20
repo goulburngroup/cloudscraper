@@ -127,7 +127,7 @@ class CloudTrax:
         self.user_url = self.cloudtrax_url + self.config.get('common', 'user_page')
         self.checkin_url = self.cloudtrax_url + self.config.get('common', 'node_checkin_page')
 
-        global email_to, email_from, email_subject
+        global email_to, email_from, email_subject, email_server
         email_to = self.config.get('email', 'to')
         email_from = self.config.get('email', 'from')
         email_subject = self.config.get('email', 'subject')
