@@ -5,6 +5,12 @@ node_checkin_page = checkin-graph2.php
 data_page = nodes_attnt2.php
 user_page = users2.php
 
+[email]
+to = user@yourdomain.com.au
+from = cloudscraper@yourdomain.com.au
+subject = CloudScraper Statistics
+server = mail.yourdomain.com.au
+
 [set_your_network]
 username = set_your_username
 password = set_your_password

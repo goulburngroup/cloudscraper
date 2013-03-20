@@ -6,11 +6,13 @@ dashboard (cloudtrax.com).
 
 """
 
-from BeautifulSoup import BeautifulSoup
+from email.mime.text import MIMEText
 from time import time
+from BeautifulSoup import BeautifulSoup
 import argparse
 import cStringIO
 import requests
+import smtplib
 import texttable
 import ConfigParser
 import Image
@@ -124,6 +126,12 @@ class CloudTrax:
         self.data_url = self.cloudtrax_url + self.config.get('common', 'data_page')
         self.user_url = self.cloudtrax_url + self.config.get('common', 'user_page')
         self.checkin_url = self.cloudtrax_url + self.config.get('common', 'node_checkin_page')
+
+        global email_to, email_from, email_subject
+        email_to = self.config.get('email', 'to')
+        email_from = self.config.get('email', 'from')
+        email_subject = self.config.get('email', 'subject')
+        email_server = self.config.get('email', 'server')
 
         self.username = self.config.get(self.network, 'username')
         self.password = self.config.get(self.network, 'password')
@@ -411,8 +419,6 @@ class User:
         return '%.2f' % (float(self.values['kb_up']) / 1000)
 
 
-
-
 #
 # Program starts here!
 #
@@ -420,6 +426,8 @@ class User:
 parser = argparse.ArgumentParser(description = 'Statistics scraper for the CloudTrax controller')
 parser.add_argument('-n', '--network', nargs = 1, 
                     help = 'The wifi network name on CloudTrax')
+parser.add_argument('-e', '--email', action = 'store_true', default = False, 
+                    help = 'Email the output')
 parser.add_argument('-f', '--file', nargs = 1, 
                     help = 'Store the output to a file')
 parser.add_argument('-d', '--database', nargs = 1, 
@@ -438,25 +446,35 @@ if args.verbose:
     timer = Timer()
 
 if args.network:
+    msg = underline('Usage for the last 24 hours')
+
     cloudtrax = CloudTrax(args.network[0], args.verbose)
     cloudtrax.login()
 
     if args.network_status:
-        if args.screen:
-            cloudtrax.get_nodes()
-            underline('Usage for the last 24 hours')
-            print '\n' + 'Gateway nodes'
-            print draw_table('gateway', cloudtrax.get_nodes())
-            print '\n' + 'Relay nodes'
-            print draw_table('relay', cloudtrax.get_nodes())
-            print '\n' + 'Spare nodes'
-            print draw_table('spare', cloudtrax.get_nodes())
+        cloudtrax.get_nodes()
+        msg += '\nGateway nodes\n' + draw_table('gateway', cloudtrax.get_nodes())
+        msg += '\n\nRelay nodes\n' + draw_table('relay', cloudtrax.get_nodes())
+        msg += '\n\nSpare nodes\n' + draw_table('spare', cloudtrax.get_nodes())
 
     if args.usage:
-        if args.screen:
-            cloudtrax.get_users()
-            print '\n' + 'Users'
-            print draw_table('user', cloudtrax.get_users())
+        cloudtrax.get_users()
+        msg += '\n\nUsers\n' + draw_table('user', cloudtrax.get_users())
+
+    if args.screen:
+        print msg
+
+    if args.email:
+        email = MIMEText('<pre>' + msg + '</pre>', 'html')
+        email['Subject'] = email_subject
+        email['From'] = email_from
+        email['To'] = email_to
+
+        # Send the message via our own SMTP server, but don't include the
+        # envelope header.
+        s = smtplib.SMTP(email_server)
+        s.sendmail(email_from, [email_to], email.as_string())
+        s.quit()
 
 else:
     parser.print_help()
