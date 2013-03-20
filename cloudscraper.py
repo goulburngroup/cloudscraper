@@ -212,6 +212,31 @@ class Node:
         return self.colour_counter
 
 
+class User:
+    """Wifi user class"""
+
+    def __init__(self, values):
+        """Constructor"""
+        print values
+        self.values = {'name': values[0][0],
+                       'mac': values[0][-1],
+                       'node_name': values[1][0],
+                       'node_mac': values[1][1],
+                       'rssi': values[3][0],
+                       'rate': values[4][0],
+                       'MCS': values[4][1],
+                       'kb_down': values[5][0],
+                       'kb_up': values[6][0],
+                       'blocked': values[8][0]}
+                       #'device_vendor': values[2]}
+
+        print_if_verbose('Creating user object for ' + self.values['mac'])
+
+    def get_values(self):
+        """Returns a bunch of values"""
+        return self.values
+
+
 class CloudTrax:
     """CloudTrax connector class"""
 
@@ -219,6 +244,7 @@ class CloudTrax:
         """Constructor"""
         self.network = network
         self.nodes = []
+        self.users = []
 
         self.verbose = verbose
         print_if_verbose('Verbose output is turned on')
@@ -279,7 +305,7 @@ class CloudTrax:
     def get_users(self):
         """Return network status"""
         if len(self.users) == 0:
-            print_if_verbose('Refreshing user status from CloudTrax')
+            print_if_verbose('Refreshing user statistics from CloudTrax')
             self.refresh_users()
 
         return self.users
@@ -318,6 +344,39 @@ class CloudTrax:
 
         return self.nodes
 
+    def refresh_users(self):
+        """Return a list of wifi user statistics scraped from CloudTrax"""
+        self.users = []
+
+        parameters = {'network': self.network}
+    
+        print_if_verbose('Requesting user statistics') 
+
+        self.request = self.session.get(self.user_url, params=parameters)
+
+        print_if_verbose('Received user statistics ok') 
+
+
+        if self.request.status_code == 200:
+            distilled_table = BeautifulSoup(self.request.content).find('table', {'class': 'inline sortable'})
+
+            for row in distilled_table.findAll('tr'):
+                raw_values = []
+
+                for cell in row.findAll('td'):
+                    raw_values.append(cell.findAll(text=True))
+
+                # Watch out for blank rows
+                if len(raw_values) > 0:
+                    # Create a new node object for each node in the network
+                    self.users.append(User(raw_values))
+
+        else:
+            print_if_verbose('Request failed') 
+            exit(self.request.status_code)
+
+        return self.users
+
 
 #
 # Program starts here!
@@ -354,6 +413,9 @@ if args.network:
         print draw_node_table('relay', cloudtrax.get_nodes())
         print '\n' + 'Spare nodes'
         print draw_node_table('spare', cloudtrax.get_nodes())
+
+        for user in cloudtrax.get_users():
+            print user.get_values()
 
 else:
     parser.print_help()
