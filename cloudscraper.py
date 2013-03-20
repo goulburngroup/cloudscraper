@@ -17,7 +17,7 @@ import texttable
 import ConfigParser
 import Image
 
-CONFIG_FILE = 'cloudscraper.conf'
+CONFIG_FILE = '/opt/cloudscraper/cloudscraper.conf'
 
 NODE_STATUS = {'gw_down': '1',
                'relay_down': '2',
