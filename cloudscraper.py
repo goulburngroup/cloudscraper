@@ -71,6 +71,26 @@ def draw_table(entity_type, entities):
 
     return table.draw()
 
+def distill_html(content, element, identifier):
+    distilled_text = []
+    
+    """Accept some HTML and return the filtered output"""
+    if element == 'table':
+        distilled_table = BeautifulSoup(content).find(element, identifier)
+
+        for row in distilled_table.findAll('tr'):
+            raw_values = []
+
+            for cell in row.findAll('td'):
+                raw_values.append(cell.findAll(text=True))
+
+            # Watch out for blank rows
+            if len(raw_values) > 0:
+                # Create a new node object for each node in the network
+                distilled_text.append(raw_values)
+
+    return distilled_text
+
 
 class Timer:
     """Universal stopwatch class"""
@@ -261,7 +281,7 @@ class User:
 
     def get_ul_usage(self):
         """Returns an float with the number of MB uploaded in the past 24hrs"""
-        return '%.2f' % float(self.values['kb_up']) / 1000)
+        return '%.2f' % (float(self.values['kb_up']) / 1000)
 
 
 class CloudTrax:
@@ -352,18 +372,8 @@ class CloudTrax:
         print_if_verbose('Received network status ok') 
 
         if self.request.status_code == 200:
-            distilled_table = BeautifulSoup(self.request.content).find('table', {'id': 'mytable'})
-
-            for row in distilled_table.findAll('tr'):
-                raw_values = []
-
-                for cell in row.findAll('td'):
-                    raw_values.append(cell.findAll(text=True))
-
-                # Watch out for blank rows
-                if len(raw_values) > 0:
-                    # Create a new node object for each node in the network
-                    self.nodes.append(Node(self.session, raw_values, self.checkin_url))
+            for raw_values in distill_html(self.request.content, 'table', {'id': 'mytable'}):
+                self.nodes.append(Node(self.session, raw_values, self.checkin_url))
 
         else:
             print_if_verbose('Request failed') 
@@ -385,18 +395,8 @@ class CloudTrax:
 
 
         if self.request.status_code == 200:
-            distilled_table = BeautifulSoup(self.request.content).find('table', {'class': 'inline sortable'})
-
-            for row in distilled_table.findAll('tr'):
-                raw_values = []
-
-                for cell in row.findAll('td'):
-                    raw_values.append(cell.findAll(text=True))
-
-                # Watch out for blank rows
-                if len(raw_values) > 0:
-                    # Create a new node object for each node in the network
-                    self.users.append(User(raw_values))
+            for raw_values in distill_html(self.request.content, 'table', {'class': 'inline sortable'}):
+                self.users.append(User(raw_values))
 
         else:
             print_if_verbose('Request failed') 
