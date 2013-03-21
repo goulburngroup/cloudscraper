@@ -34,9 +34,9 @@ NODE_STATUS = {'gw_down': '1',
 #
 
 def distill_html(content, element, identifier):
+    """Accept some HTML and return the filtered output"""
     distilled_text = []
     
-    """Accept some HTML and return the filtered output"""
     if element == 'table':
         distilled_table = BeautifulSoup(content).find(element, identifier)
 
@@ -115,30 +115,35 @@ class CloudTrax:
         self.nodes = []
         self.users = []
 
+        self.session = requests.session()
+
         self.verbose = verbose
         print_if_verbose('Verbose output is turned on')
 
         self.config = ConfigParser.RawConfigParser()
         self.config.read(CONFIG_FILE)
 
-        self.cloudtrax_url = self.config.get('common', 'cloudtrax_url')
-        self.login_url = self.cloudtrax_url + self.config.get('common', 'login_page')
-        self.data_url = self.cloudtrax_url + self.config.get('common', 'data_page')
-        self.user_url = self.cloudtrax_url + self.config.get('common', 'user_page')
-        self.checkin_url = self.cloudtrax_url + self.config.get('common', 'node_checkin_page')
+        self.url = {'base': self.config.get('common', 'cloudtrax_url')}
 
-        global email_to, email_from, email_subject, email_server
-        email_to = self.config.get('email', 'to')
-        email_from = self.config.get('email', 'from')
-        email_subject = self.config.get('email', 'subject')
-        email_server = self.config.get('email', 'server')
+        self.url = {'login': self.url['base'] +
+                             self.config.get('common', 'login_page'),
+                     'data': self.url['base'] +
+                             self.config.get('common', 'data_page'),
+                     'user': self.url['base'] +
+                             self.config.get('common', 'user_page'),
+                     'checkin': self.url['base'] +
+                             self.config.get('common', 'node_checkin_page')}
+
+        self.email = {'to': self.config.get('email', 'to'),
+                      'from': self.config.get('email', 'from'),
+                      'subject': self.config.get('email', 'subject'),
+                      'server': self.config.get('email', 'server')}
 
         self.username = self.config.get(self.network, 'username')
         self.password = self.config.get(self.network, 'password')
 
     def login(self):
         """Method to login and create a web session"""
-        self.session = requests.session()
 
         print_if_verbose('Logging in to CloudTrax Dashboard')
 
@@ -147,8 +152,8 @@ class CloudTrax:
                       'status': 'View Status'}
 
         try:
-            s = self.session.post(self.login_url, data=parameters)
-            s.raise_for_status()
+            request = self.session.post(self.url['login'], data=parameters)
+            request.raise_for_status()
 
         except requests.exceptions.HTTPError:
             print_if_verbose('There was a HTTP error')
@@ -167,40 +172,42 @@ class CloudTrax:
 
         print_if_verbose('Requesting node checkin status for ' + node_mac)
 
-        request = self.session.get(self.checkin_url, params=parameters)
+        request = self.session.get(self.url['checkin'], params=parameters)
 
-        self.colour_counter = {'cccccc': 0, '1faa5f': 0, '4fdd8f': 0}
+        colour_counter = {'cccccc': 0, '1faa5f': 0, '4fdd8f': 0}
 
-        self.checkin_img = Image.open(cStringIO.StringIO(request.content))
-        self.checkin_img_width = self.checkin_img.size[0]
-        self.checkin_img_height = self.checkin_img.size[1]
+        checkin_img = Image.open(cStringIO.StringIO(request.content))
+        checkin_img_width = checkin_img.size[0]
+        checkin_img_height = checkin_img.size[1]
 
-        ROW = 1
+        row = 1
 
-        pixelmap = self.checkin_img.load()
+        pixelmap = checkin_img.load()
 
-        for col in range(0, self.checkin_img_width):
-            pixel_colour = str("%x%x%x" % (pixelmap[col, ROW][0], pixelmap[col, ROW][1], pixelmap[col, ROW][2]))
+        for col in range(0, checkin_img_width):
+            pixel_colour = str("%x%x%x" % (pixelmap[col, row][0],
+                                           pixelmap[col, row][1],
+                                           pixelmap[col, row][2]))
 
-            if pixel_colour in self.colour_counter.keys() and pixel_colour != '000':
-                self.colour_counter[pixel_colour] += 1
+            if pixel_colour in colour_counter.keys():
+                colour_counter[pixel_colour] += 1
             else:
-                self.colour_counter[pixel_colour] = 1
+                colour_counter[pixel_colour] = 1
 
         # Convert number of pixels into a percent
-        time_as_gw = (self.colour_counter['1faa5f'] * 100) / (self.checkin_img_width - 2)
-        time_as_relay = (self.colour_counter['4fdd8f'] * 100) / (self.checkin_img_width - 2)
-        time_offline = (self.colour_counter['cccccc'] * 100) / (self.checkin_img_width - 2)
+        time_as_gw = (colour_counter['1faa5f'] * 100) / (checkin_img_width - 2)
+        time_as_relay = (colour_counter['4fdd8f'] * 100) / (checkin_img_width - 2)
+        time_offline = (colour_counter['cccccc'] * 100) / (checkin_img_width - 2)
 
         return (time_as_gw, time_as_relay, time_offline)
+
+    def get_email_config(self):
+        """Return email details"""
+        return self.email
 
     def get_session(self):
         """Return session id"""
         return self.session
-
-    def get_request(self):
-        """Return request id"""
-        return self.request
 
     def get_nodes(self):
         """Return a list of nodes"""
@@ -230,17 +237,17 @@ class CloudTrax:
     
         print_if_verbose('Requesting network status') 
 
-        self.request = self.session.get(self.data_url, params=parameters)
+        request = self.session.get(self.url['data'], params=parameters)
 
         print_if_verbose('Received network status ok') 
 
-        if self.request.status_code == 200:
-            for raw_values in distill_html(self.request.content, 'table', {'id': 'mytable'}):
+        if request.status_code == 200:
+            for raw_values in distill_html(request.content, 'table', {'id': 'mytable'}):
                 self.nodes.append(Node(raw_values, self.get_checkin_data(raw_values[2][0])))
 
         else:
             print_if_verbose('Request failed') 
-            exit(self.request.status_code)
+            exit(request.status_code)
 
         return self.nodes
 
@@ -252,18 +259,18 @@ class CloudTrax:
     
         print_if_verbose('Requesting user statistics') 
 
-        self.request = self.session.get(self.user_url, params=parameters)
+        request = self.session.get(self.url['user'], params=parameters)
 
         print_if_verbose('Received user statistics ok') 
 
 
-        if self.request.status_code == 200:
-            for raw_values in distill_html(self.request.content, 'table', {'class': 'inline sortable'}):
+        if request.status_code == 200:
+            for raw_values in distill_html(request.content, 'table', {'class': 'inline sortable'}):
                 self.users.append(User(raw_values))
 
         else:
             print_if_verbose('Request failed') 
-            exit(self.request.status_code)
+            exit(request.status_code)
 
         return self.users
 
@@ -424,21 +431,35 @@ class User:
 #
 
 parser = argparse.ArgumentParser(description = 'Statistics scraper for the CloudTrax controller')
-parser.add_argument('-n', '--network', nargs = 1, 
-                    help = 'The wifi network name on CloudTrax')
-parser.add_argument('-e', '--email', action = 'store_true', default = False, 
-                    help = 'Email the output')
-parser.add_argument('-f', '--file', nargs = 1, 
-                    help = 'Store the output to a file')
-parser.add_argument('-d', '--database', nargs = 1, 
+parser.add_argument('-d', '--database',
+                    action = 'store_true',
+                    default = False, 
                     help = 'Store the output to a database')
-parser.add_argument('-s', '--screen', action = 'store_true', default = False, 
+parser.add_argument('-e', '--email',
+                    action = 'store_true',
+                    default = False, 
+                    help = 'Email the output')
+parser.add_argument('-f', '--file',
+                    nargs = 1, 
+                    help = 'Store the output to a file')
+parser.add_argument('-n', '--network',
+                    nargs = 1, 
+                    help = 'The wifi network name on CloudTrax')
+parser.add_argument('-s', '--screen',
+                    action = 'store_true',
+                    default = False, 
                     help = 'Display the output to stdout')
-parser.add_argument('-v', '--verbose', action = 'store_true', default = False, 
+parser.add_argument('-v', '--verbose',
+                    action = 'store_true',
+                    default = False, 
                     help = 'Be Verbose')
-parser.add_argument('-N', '--network-status', action = 'store_true', default = False,
+parser.add_argument('-N', '--network-status',
+                    action = 'store_true',
+                    default = False,
                     help = 'Get the network status')
-parser.add_argument('-U', '--usage', action = 'store_true', default = False,
+parser.add_argument('-U', '--usage',
+                    action = 'store_true',
+                    default = False,
                     help = 'Get the usage statistics')
 args = parser.parse_args()
 
@@ -453,13 +474,17 @@ if args.network:
 
     if args.network_status:
         cloudtrax.get_nodes()
-        msg += '\nGateway nodes\n' + draw_table('gateway', cloudtrax.get_nodes())
-        msg += '\n\nRelay nodes\n' + draw_table('relay', cloudtrax.get_nodes())
-        msg += '\n\nSpare nodes\n' + draw_table('spare', cloudtrax.get_nodes())
+        msg += '\nGateway nodes\n' + draw_table('gateway',
+                                                cloudtrax.get_nodes())
+        msg += '\n\nRelay nodes\n' + draw_table('relay',
+                                                cloudtrax.get_nodes())
+        msg += '\n\nSpare nodes\n' + draw_table('spare',
+                                                cloudtrax.get_nodes())
 
     if args.usage:
         cloudtrax.get_users()
-        msg += '\n\nUsers\n' + draw_table('user', cloudtrax.get_users())
+        msg += '\n\nUsers\n' + draw_table('user',
+                                          cloudtrax.get_users())
 
     if args.screen:
         print_if_verbose('Processing screen output')
@@ -468,15 +493,17 @@ if args.network:
     if args.email:
         print_if_verbose('Processing email output')
         email = MIMEText('<pre>' + msg + '</pre>', 'html')
-        email['Subject'] = email_subject
-        email['From'] = email_from
-        email['To'] = email_to
+        email['Subject'] = cloudtrax.get_email_config()['subject']
+        email['From'] = cloudtrax.get_email_config()['from']
+        email['To'] = cloudtrax.get_email_config()['to']
 
         # Send the message via our own SMTP server, but don't include the
         # envelope header.
-        s = smtplib.SMTP(email_server)
-        s.sendmail(email_from, email_to.split(), email.as_string())
-        s.quit()
+        mailer = smtplib.SMTP(cloudtrax.get_email_config()['server'])
+        mailer.sendmail(cloudtrax.get_email_config()['from'],
+                        cloudtrax.get_email_config()['to'].split(),
+                        email.as_string())
+        mailer.quit()
 
     if args.file:
         print_if_verbose('Processing file output')
