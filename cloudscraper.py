@@ -297,31 +297,32 @@ class Node:
         elif values[0][0] == NODE_STATUS['spare_down']:
             self.node_type = 'spare'
             self.node_status = 'down'
-        self.name = values[1][0]
-        self.comment = values[1][-1]
-        self.mac = values[2][0]
-        self.ip = values[2][1]
-        self.chan_24 = values[3][0]
-        self.chan_58 = values[3][1]
-        self.users_24 = values[4][0]
-        self.download_24 = values[5][0]
-        self.upload_24 = values[5][1]
-        self.uptime = values[6][0]
-        self.fw_version = values[7][0]
-        self.fw_name = values[7][1]
-        self.load = values[8][0]
-        self.memfree = values[8][1]
-        self.time_since_checkin = values[9][0]
-        self.gateway_name = values[10][0]
-        self.gateway_ip = values[10][1]
-        self.hops = values[11][0]
-        self.latency = values[12][0]
+
+        self.values = {'name': values[1][0],
+                       'comment': values[1][-1],
+                       'mac': values[2][0],
+                       'ip': values[2][1],
+                       'chan_24': values[3][0],
+                       'chan_58': values[3][1],
+                       'users': values[4][0],
+                       'dl': values[5][0],
+                       'ul': values[5][1],
+                       'uptime': values[6][0],
+                       'fw_version': values[7][0],
+                       'fw_name': values[7][1],
+                       'load': values[8][0],
+                       'memfree': values[8][1],
+                       'last_checkin': values[9][0],
+                       'gateway_name': values[10][0],
+                       'gateway_ip': values[10][1],
+                       'hops': values[11][0],
+                       'latency': values[12][0]}
 
         self.checkin_data = checkin_data
 
     def get_mac(self):
         """Return the mac address of this node"""
-        return self.mac
+        return self.values['mac']
 
     def get_time_offline(self):
         """Return a float of the percent of time in 24hrs offline"""
@@ -343,19 +344,19 @@ class Node:
         """Returns a list of items that match up to the screen text table for the node type"""
 
         if self.node_type == 'gateway' or self.node_type == 'spare':
-            row = [self.name + '\n(' + self.mac + ')',
-                   self.users_24,
-                   self.download_24 + '\n(' + self.upload_24 + ')',
+            row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
+                   self.values['users'],
+                   self.values['dl'] + '\n(' + self.values['ul'] + ')',
                    str(self.checkin_data[0]) + '%\n(' + str(100 - self.checkin_data[0]) + '%)',
-                   self.gateway_ip + '\n(' + self.fw_version + ')']
+                   self.values['gateway_ip'] + '\n(' + self.values['fw_version'] + ')']
 
         elif self.node_type == 'relay':
-            row = [self.name + '\n(' + self.mac + ')',
-                   self.users_24,
-                   self.download_24 + '\n(' + self.upload_24 + ')',
-                   self.gateway_name + '\n(' + self.fw_version + ')',
+            row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
+                   self.values['users'],
+                   self.values['dl'] + '\n(' + self.values['ul'] + ')',
+                   self.values['gateway_name'] + '\n(' + self.values['fw_version'] + ')',
                    str(self.checkin_data[1]) + '%\n(' + str(100 - self.checkin_data[1]) + '%)',
-                   self.latency + 'ms\n(' + self.hops + ')']
+                   self.values['latency'] + 'ms\n(' + self.values['hops'] + ')']
 
         return row
 
