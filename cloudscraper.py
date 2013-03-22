@@ -440,12 +440,22 @@ parser.add_argument('-U', '--usage',
                     help = 'Get the usage statistics')
 args = parser.parse_args()
 
+# Set up logging
+if args.verbose:
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
+else:
+    logging.basicConfig(level=logging.WARNING,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
 
 if args.network:
-    if args.verbose:
-        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-    else:
-        logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+    # We need to know to output the result
+    if not (args.database or args.email or args.file or args.screen):
+        parser.error('No output defined')
+
+    # We need to know what kind of information to include
+    if not (args.network_status or args.usage):
+        parser.error('What do you want to know?')
 
     msg = 'Usage for the last 24 hours\n'
     msg += '---------------------------\n'
@@ -493,6 +503,5 @@ if args.network:
         fileout.close()
 
 else:
-    parser.print_help()
-    exit(1)
+    parser.error('You must provide a network')
 
