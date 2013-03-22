@@ -278,7 +278,6 @@ class Node:
     """CloudTrax node class"""
     def __init__(self, values, checkin_data):
         """Constructor"""
-        # TODO: last_checkin can be a 2 element array if down or late.
         if values[0][0] == NODE_STATUS['gw_up']:
             self.node_type = 'gateway'
             self.node_status = 'up'
@@ -318,7 +317,7 @@ class Node:
                        'fw_name': values[7][1],
                        'load': values[8][0],
                        'memfree': values[8][1],
-                       'last_checkin': values[9][0],
+                       'last_checkin': values[9][-1],
                        'gateway_name': values[10][0],
                        'gateway_ip': values[10][1],
                        'hops': values[11][0],
