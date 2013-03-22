@@ -98,15 +98,13 @@ def draw_table(entity_type, entities):
 class CloudTrax:
     """CloudTrax connector class"""
 
-    def __init__(self, network, verbose):
+    def __init__(self, network):
         """Constructor"""
         self.network = network
         self.nodes = []
         self.users = []
 
         self.session = requests.session()
-
-        self.verbose = verbose
 
         logging.debug('Verbose output is turned on')
 
@@ -452,7 +450,7 @@ if args.network:
     msg = 'Usage for the last 24 hours\n'
     msg += '---------------------------\n'
 
-    cloudtrax = CloudTrax(args.network[0], args.verbose)
+    cloudtrax = CloudTrax(args.network[0])
     cloudtrax.login()
 
     if args.network_status:
