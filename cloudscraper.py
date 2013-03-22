@@ -107,7 +107,6 @@ class CloudTrax:
 
     def __init__(self, network):
         """Constructor"""
-        self.network = network
         self.nodes = []
         self.users = []
 
@@ -115,35 +114,36 @@ class CloudTrax:
 
         logging.debug('Verbose output is turned on')
 
-        self.config = ConfigParser.RawConfigParser()
-        self.config.read(CONFIG_FILE)
+        config = ConfigParser.RawConfigParser()
+        config.read(CONFIG_FILE)
 
-        self.url = {'base': self.config.get('common', 'cloudtrax_url')}
+        self.url = {'base': config.get('common', 'cloudtrax_url')}
 
         self.url = {'login': self.url['base'] +
-                             self.config.get('common', 'login_page'),
+                             config.get('common', 'login_page'),
                      'data': self.url['base'] +
-                             self.config.get('common', 'data_page'),
+                             config.get('common', 'data_page'),
                      'user': self.url['base'] +
-                             self.config.get('common', 'user_page'),
+                             config.get('common', 'user_page'),
                      'checkin': self.url['base'] +
-                             self.config.get('common', 'node_checkin_page')}
+                             config.get('common', 'node_checkin_page')}
 
-        self.email = {'to': self.config.get('email', 'to'),
-                      'from': self.config.get('email', 'from'),
-                      'subject': self.config.get('email', 'subject'),
-                      'server': self.config.get('email', 'server')}
+        self.email = {'to': config.get('email', 'to'),
+                      'from': config.get('email', 'from'),
+                      'subject': config.get('email', 'subject'),
+                      'server': config.get('email', 'server')}
 
-        self.username = self.config.get(self.network, 'username')
-        self.password = self.config.get(self.network, 'password')
+        self.network = {'name': network,
+                        'username': config.get(network, 'username'),
+                        'password': config.get(network, 'password')}
 
     def login(self):
         """Method to login and create a web session"""
 
         logging.debug('Logging in to CloudTrax Dashboard')
 
-        parameters = {'account': self.username,
-                      'password': self.password,
+        parameters = {'account': self.network['username'],
+                      'password': self.network['password'],
                       'status': 'View Status'}
 
         try:
@@ -227,7 +227,7 @@ class CloudTrax:
         """Return network information scraped from CloudTrax"""
         self.nodes = []
 
-        parameters = {'network': self.network,
+        parameters = {'network': self.network['name'],
                       'showall': '1',
                       'details': '1'}
     
@@ -253,7 +253,7 @@ class CloudTrax:
         """Return a list of wifi user statistics scraped from CloudTrax"""
         self.users = []
 
-        parameters = {'network': self.network}
+        parameters = {'network': self.network['name']}
     
         logging.debug('Requesting user statistics') 
 
