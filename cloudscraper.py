@@ -90,6 +90,13 @@ def draw_table(entity_type, entities):
     return table.draw()
 
 
+def percentage(value, max_value):
+    """Returns a float representing the percentage that
+       value is of max_value"""
+
+    return (float(value) * 100) / max_value
+
+
 
 #
 # Objects
@@ -181,9 +188,12 @@ class CloudTrax:
                 colour_counter[pixel_colour] = 1
 
         # Convert number of pixels into a percent
-        time_as_gw = (colour_counter['1faa5f'] * 100) / (checkin_img.size[0] - 2)
-        time_as_relay = (colour_counter['4fdd8f'] * 100) / (checkin_img.size[0] - 2)
-        time_offline = (colour_counter['cccccc'] * 100) / (checkin_img.size[0] - 2)
+        time_as_gw = percentage(colour_counter['1faa5f'],
+                                checkin_img.size[0] - 2)
+        time_as_relay = percentage(colour_counter['4fdd8f'],
+                                   checkin_img.size[0] - 2)
+        time_offline = percentage(colour_counter['cccccc'],
+                                  checkin_img.size[0] - 2)
 
         return (time_as_gw, time_as_relay, time_offline)
 
@@ -228,8 +238,10 @@ class CloudTrax:
         logging.debug('Received network status ok') 
 
         if request.status_code == 200:
-            for raw_values in distill_html(request.content, 'table', {'id': 'mytable'}):
-                self.nodes.append(Node(raw_values, self.get_checkin_data(raw_values[2][0])))
+            for raw_values in distill_html(request.content, 'table',
+                                           {'id': 'mytable'}):
+                self.nodes.append(Node(raw_values,
+                    self.get_checkin_data(raw_values[2][0])))
 
         else:
             logging.debug('Request failed') 
@@ -251,7 +263,8 @@ class CloudTrax:
 
 
         if request.status_code == 200:
-            for raw_values in distill_html(request.content, 'table', {'class': 'inline sortable'}):
+            for raw_values in distill_html(request.content, 'table',
+                                           {'class': 'inline sortable'}):
                 self.users.append(User(raw_values))
 
         else:
@@ -265,7 +278,7 @@ class Node:
     """CloudTrax node class"""
     def __init__(self, values, checkin_data):
         """Constructor"""
-        # TODO: time_since_last_checkin can be a 2 element array if down or late.
+        # TODO: last_checkin can be a 2 element array if down or late.
         if values[0][0] == NODE_STATUS['gw_up']:
             self.node_type = 'gateway'
             self.node_status = 'up'
@@ -322,11 +335,13 @@ class Node:
         return self.checkin_data[2]
 
     def get_time_gw(self):
-        """Return a float of the percent of time in 24hrs online as a gateway node"""
+        """Return a float representing the percent of time in 24hrs online
+           as a gateway node"""
         return self.checkin_data[0]
 
     def get_time_relay(self):
-        """Return a float of the percent of time in 24hrs online as a relay node"""
+        """Return a float representing the percent of time in 24hrs online
+           as a relay node"""
         return self.checkin_data[1]
 
     def get_type(self):
@@ -334,21 +349,26 @@ class Node:
         return self.node_type
 
     def get_table_row(self):
-        """Returns a list of items that match up to the screen text table for the node type"""
+        """Returns a list of items that match up to the screen text table
+           for the node type"""
 
         if self.node_type == 'gateway' or self.node_type == 'spare':
             row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
                    self.values['users'],
                    self.values['dl'] + '\n(' + self.values['ul'] + ')',
-                   str(self.checkin_data[0]) + '%\n(' + str(100 - self.checkin_data[0]) + '%)',
-                   self.values['gateway_ip'] + '\n(' + self.values['fw_version'] + ')']
+                   '%.2f' % (self.checkin_data[0]) + '%\n(' + 
+                       '%.2f' % (100 - self.checkin_data[0]) + '%)',
+                   self.values['gateway_ip'] + '\n(' +
+                       self.values['fw_version'] + ')']
 
         elif self.node_type == 'relay':
             row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
                    self.values['users'],
                    self.values['dl'] + '\n(' + self.values['ul'] + ')',
-                   self.values['gateway_name'] + '\n(' + self.values['fw_version'] + ')',
-                   str(self.checkin_data[1]) + '%\n(' + str(100 - self.checkin_data[1]) + '%)',
+                   self.values['gateway_name'] + '\n(' + 
+                       self.values['fw_version'] + ')',
+                   '%.2f' % (self.checkin_data[1]) + '%\n(' + 
+                       '%.2f' % (100 - self.checkin_data[1]) + '%)',
                    self.values['latency'] + 'ms\n(' + self.values['hops'] + ')']
 
         return row
@@ -387,25 +407,28 @@ class User:
         row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
                self.values['node_name'] + '\n(' + self.values['node_mac'] + ')',
                self.values['blocked'],
-               str(self.get_dl_usage()),
-               str(self.get_ul_usage())]
+               '%.2f' % (self.get_dl()),
+               '%.2f' % (self.get_ul())]
 
         return row
 
-    def get_dl_usage(self):
-        """Returns an float with the number of MB downloaded in the past 24hrs"""
-        return '%.2f' % (float(self.values['kb_down']) / 1000)
+    def get_dl(self):
+        """Returns a float representing the number of megabytes downloaded 
+           in the past 24hrs"""
+        return float(self.values['kb_down']) / 1000
 
-    def get_ul_usage(self):
-        """Returns an float with the number of MB uploaded in the past 24hrs"""
-        return '%.2f' % (float(self.values['kb_up']) / 1000)
+    def get_ul(self):
+        """Returns a float representing the number of megabytes uploaded
+           in the past 24hrs"""
+        return float(self.values['kb_up']) / 1000
 
 
 #
 # Program starts here!
 #
 
-parser = argparse.ArgumentParser(description = 'Statistics scraper for the CloudTrax controller')
+parser = argparse.ArgumentParser(description = 'Statistics scraper for the ' +
+                                               'CloudTrax controller')
 parser.add_argument('-d', '--database',
                     action = 'store_true',
                     default = False, 
