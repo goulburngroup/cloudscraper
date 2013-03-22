@@ -165,14 +165,12 @@ class CloudTrax:
         colour_counter = {'cccccc': 0, '1faa5f': 0, '4fdd8f': 0}
 
         checkin_img = Image.open(cStringIO.StringIO(request.content))
-        checkin_img_width = checkin_img.size[0]
-        checkin_img_height = checkin_img.size[1]
 
         row = 1
 
         pixelmap = checkin_img.load()
 
-        for col in range(0, checkin_img_width):
+        for col in range(0, checkin_img.size[0]):
             pixel_colour = str("%x%x%x" % (pixelmap[col, row][0],
                                            pixelmap[col, row][1],
                                            pixelmap[col, row][2]))
@@ -183,9 +181,9 @@ class CloudTrax:
                 colour_counter[pixel_colour] = 1
 
         # Convert number of pixels into a percent
-        time_as_gw = (colour_counter['1faa5f'] * 100) / (checkin_img_width - 2)
-        time_as_relay = (colour_counter['4fdd8f'] * 100) / (checkin_img_width - 2)
-        time_offline = (colour_counter['cccccc'] * 100) / (checkin_img_width - 2)
+        time_as_gw = (colour_counter['1faa5f'] * 100) / (checkin_img.size[0] - 2)
+        time_as_relay = (colour_counter['4fdd8f'] * 100) / (checkin_img.size[0] - 2)
+        time_offline = (colour_counter['cccccc'] * 100) / (checkin_img.size[0] - 2)
 
         return (time_as_gw, time_as_relay, time_offline)
 
