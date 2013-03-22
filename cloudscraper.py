@@ -96,12 +96,6 @@ def print_if_verbose(message):
         print timer.get_elapsed_time(), message
 
 
-def underline(text):
-    """Returns an underlined version of the text supplied"""
-
-    return text + '\n' + (len(text) * '-') + '\n'
-
-
 #
 # Objects
 #
@@ -467,7 +461,8 @@ if args.verbose:
     timer = Timer()
 
 if args.network:
-    msg = underline('Usage for the last 24 hours')
+    msg = 'Usage for the last 24 hours\n'
+    msg += '---------------------------\n'
 
     cloudtrax = CloudTrax(args.network[0], args.verbose)
     cloudtrax.login()
