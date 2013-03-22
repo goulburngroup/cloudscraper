@@ -7,10 +7,10 @@ dashboard (cloudtrax.com).
 """
 
 from email.mime.text import MIMEText
-from time import time
 from BeautifulSoup import BeautifulSoup
 import argparse
 import cStringIO
+import logging
 import requests
 import smtplib
 import texttable
@@ -90,11 +90,6 @@ def draw_table(entity_type, entities):
     return table.draw()
 
 
-def print_if_verbose(message):
-    """Print the message to stdout if verbose output is requested"""
-    if args.verbose:
-        print timer.get_elapsed_time(), message
-
 
 #
 # Objects
@@ -112,7 +107,8 @@ class CloudTrax:
         self.session = requests.session()
 
         self.verbose = verbose
-        print_if_verbose('Verbose output is turned on')
+
+        logging.debug('Verbose output is turned on')
 
         self.config = ConfigParser.RawConfigParser()
         self.config.read(CONFIG_FILE)
@@ -139,7 +135,7 @@ class CloudTrax:
     def login(self):
         """Method to login and create a web session"""
 
-        print_if_verbose('Logging in to CloudTrax Dashboard')
+        logging.debug('Logging in to CloudTrax Dashboard')
 
         parameters = {'account': self.username,
                       'password': self.password,
@@ -150,10 +146,10 @@ class CloudTrax:
             request.raise_for_status()
 
         except requests.exceptions.HTTPError:
-            print_if_verbose('There was a HTTP error')
+            logging.debug('There was a HTTP error')
             exit(1)
         except requests.exceptions.ConnectionError:
-            print_if_verbose('There was a connection error')
+            logging.debug('There was a connection error')
             exit(1)
 
         return self.session
@@ -164,7 +160,7 @@ class CloudTrax:
         parameters = {'mac': node_mac,
                       'legend': '0'}
 
-        print_if_verbose('Requesting node checkin status for ' + node_mac)
+        logging.debug('Requesting node checkin status for ' + node_mac)
 
         request = self.session.get(self.url['checkin'], params=parameters)
 
@@ -208,7 +204,7 @@ class CloudTrax:
 
         # Refresh the network status if the nodes list is empty
         if len(self.nodes) == 0:
-            print_if_verbose('Refreshing node status from CloudTrax')
+            logging.debug('Refreshing node status from CloudTrax')
             self.refresh_network_status()
 
         return self.nodes
@@ -216,7 +212,7 @@ class CloudTrax:
     def get_users(self):
         """Return network status"""
         if len(self.users) == 0:
-            print_if_verbose('Refreshing user statistics from CloudTrax')
+            logging.debug('Refreshing user statistics from CloudTrax')
             self.refresh_users()
 
         return self.users
@@ -229,18 +225,18 @@ class CloudTrax:
                       'showall': '1',
                       'details': '1'}
     
-        print_if_verbose('Requesting network status') 
+        logging.debug('Requesting network status') 
 
         request = self.session.get(self.url['data'], params=parameters)
 
-        print_if_verbose('Received network status ok') 
+        logging.debug('Received network status ok') 
 
         if request.status_code == 200:
             for raw_values in distill_html(request.content, 'table', {'id': 'mytable'}):
                 self.nodes.append(Node(raw_values, self.get_checkin_data(raw_values[2][0])))
 
         else:
-            print_if_verbose('Request failed') 
+            logging.debug('Request failed') 
             exit(request.status_code)
 
         return self.nodes
@@ -251,11 +247,11 @@ class CloudTrax:
 
         parameters = {'network': self.network}
     
-        print_if_verbose('Requesting user statistics') 
+        logging.debug('Requesting user statistics') 
 
         request = self.session.get(self.url['user'], params=parameters)
 
-        print_if_verbose('Received user statistics ok') 
+        logging.debug('Received user statistics ok') 
 
 
         if request.status_code == 200:
@@ -263,7 +259,7 @@ class CloudTrax:
                 self.users.append(User(raw_values))
 
         else:
-            print_if_verbose('Request failed') 
+            logging.debug('Request failed') 
             exit(request.status_code)
 
         return self.users
@@ -362,17 +358,6 @@ class Node:
         return row
 
 
-class Timer:
-    """Universal stopwatch class"""
-    def __init__(self):
-        # Start the clock
-        self.start_time = time()
-
-    def get_elapsed_time(self):
-        """Returns the number of seconds elapsed"""
-        return "%.2f" % (time() - self.start_time)
-
-
 class User:
     """Wifi user class"""
 
@@ -390,7 +375,7 @@ class User:
                        'blocked': values[8][0]}
                        #'device_vendor': values[2]}
 
-        print_if_verbose('Creating user object for ' + self.values['mac'])
+        logging.debug('Creating user object for ' + self.values['mac'])
 
     def get_type(self):
         """Return a string that describes the object type."""
@@ -457,10 +442,13 @@ parser.add_argument('-U', '--usage',
                     help = 'Get the usage statistics')
 args = parser.parse_args()
 
-if args.verbose:
-    timer = Timer()
 
 if args.network:
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    else:
+        logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+
     msg = 'Usage for the last 24 hours\n'
     msg += '---------------------------\n'
 
@@ -482,11 +470,11 @@ if args.network:
                                           cloudtrax.get_users())
 
     if args.screen:
-        print_if_verbose('Processing screen output')
+        logging.debug('Processing screen output')
         print msg
 
     if args.email:
-        print_if_verbose('Processing email output')
+        logging.debug('Processing email output')
         email = MIMEText('<pre>' + msg + '</pre>', 'html')
         email['Subject'] = cloudtrax.get_email_config()['subject']
         email['From'] = cloudtrax.get_email_config()['from']
@@ -501,7 +489,7 @@ if args.network:
         mailer.quit()
 
     if args.file:
-        print_if_verbose('Processing file output')
+        logging.debug('Processing file output')
         fileout = open(args.file[0], 'w')
         fileout.write(msg)
         fileout.close()
