@@ -107,7 +107,7 @@ class CloudTrax:
 
         self.session = requests.session()
 
-        logging.debug('Verbose output is turned on')
+        logging.info('Verbose output is turned on')
 
         config = ConfigParser.RawConfigParser()
         config.read(CONFIG_FILE)
@@ -135,7 +135,7 @@ class CloudTrax:
     def login(self):
         """Method to login and create a web session"""
 
-        logging.debug('Logging in to CloudTrax Dashboard')
+        logging.info('Logging in to CloudTrax Dashboard')
 
         parameters = {'account': self.network['username'],
                       'password': self.network['password'],
@@ -146,10 +146,10 @@ class CloudTrax:
             request.raise_for_status()
 
         except requests.exceptions.HTTPError:
-            logging.debug('There was a HTTP error')
+            logging.error('There was a HTTP error')
             exit(1)
         except requests.exceptions.ConnectionError:
-            logging.debug('There was a connection error')
+            logging.error('There was a connection error')
             exit(1)
 
         return self.session
@@ -160,7 +160,7 @@ class CloudTrax:
         parameters = {'mac': node_mac,
                       'legend': '0'}
 
-        logging.debug('Requesting node checkin status for ' + node_mac)
+        logging.info('Requesting node checkin status for ' + node_mac)
 
         request = self.session.get(self.url['checkin'], params=parameters)
 
@@ -205,7 +205,7 @@ class CloudTrax:
 
         # Refresh the network status if the nodes list is empty
         if len(self.nodes) == 0:
-            logging.debug('Refreshing node status from CloudTrax')
+            logging.info('Refreshing node status from CloudTrax')
             self.refresh_nodes()
 
         return self.nodes
@@ -213,7 +213,7 @@ class CloudTrax:
     def get_users(self):
         """Return network status"""
         if len(self.users) == 0:
-            logging.debug('Refreshing user statistics from CloudTrax')
+            logging.info('Refreshing user statistics from CloudTrax')
             self.refresh_users()
 
         return self.users
@@ -226,11 +226,11 @@ class CloudTrax:
                       'showall': '1',
                       'details': '1'}
     
-        logging.debug('Requesting network status') 
+        logging.info('Requesting network status') 
 
         request = self.session.get(self.url['data'], params=parameters)
 
-        logging.debug('Received network status ok') 
+        logging.info('Received network status ok') 
 
         if request.status_code == 200:
             for raw_values in distill_html(request.content, 'table',
@@ -239,7 +239,7 @@ class CloudTrax:
                     self.get_checkin_data(raw_values[2][0])))
 
         else:
-            logging.debug('Request failed') 
+            logging.error('Request failed') 
             exit(request.status_code)
 
         return self.nodes
@@ -250,11 +250,11 @@ class CloudTrax:
 
         parameters = {'network': self.network['name']}
     
-        logging.debug('Requesting user statistics') 
+        logging.info('Requesting user statistics') 
 
         request = self.session.get(self.url['user'], params=parameters)
 
-        logging.debug('Received user statistics ok') 
+        logging.info('Received user statistics ok') 
 
 
         if request.status_code == 200:
@@ -263,7 +263,7 @@ class CloudTrax:
                 self.users.append(User(raw_values))
 
         else:
-            logging.debug('Request failed') 
+            logging.error('Request failed') 
             exit(request.status_code)
 
         return self.users
@@ -427,7 +427,7 @@ class User:
                        'blocked': values[8][0]}
                        #'device_vendor': values[2]}
 
-        logging.debug('Creating user object for ' + self.values['mac'])
+        logging.info('Creating user object for ' + self.values['mac'])
 
     def get_values(self):
         """Returns a bunch of values"""
@@ -522,11 +522,11 @@ if args.network:
         msg += cloudtrax.report_users()
 
     if args.screen:
-        logging.debug('Processing screen output')
+        logging.info('Processing screen output')
         print msg
 
     if args.email:
-        logging.debug('Processing email output')
+        logging.info('Processing email output')
         email = MIMEText('<pre>' + msg + '</pre>', 'html')
         email['Subject'] = cloudtrax.get_email_config()['subject']
         email['From'] = cloudtrax.get_email_config()['from']
@@ -541,7 +541,7 @@ if args.network:
         mailer.quit()
 
     if args.file:
-        logging.debug('Processing file output')
+        logging.info('Processing file output')
         fileout = open(args.file[0], 'w')
         fileout.write(msg)
         fileout.close()
