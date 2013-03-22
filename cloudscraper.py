@@ -72,12 +72,7 @@ def draw_table(entity_type, entities):
                         'Users',
                         'DL MB\nUL MB',
                         'Up\n(Down)',
-                        'IP Address\n(Firmware)'],
-              'user': ['Name\n(mac)',
-                       'Last seen on',
-                       'Blocked',
-                       'MB Down',
-                       'MB Up']}
+                        'IP Address\n(Firmware)']}
 
     table = texttable.Texttable()
     table.header(header[entity_type])
@@ -211,7 +206,7 @@ class CloudTrax:
         # Refresh the network status if the nodes list is empty
         if len(self.nodes) == 0:
             logging.debug('Refreshing node status from CloudTrax')
-            self.refresh_network_status()
+            self.refresh_nodes()
 
         return self.nodes
 
@@ -223,7 +218,7 @@ class CloudTrax:
 
         return self.users
 
-    def refresh_network_status(self):
+    def refresh_nodes(self):
         """Return network information scraped from CloudTrax"""
         self.nodes = []
 
@@ -272,6 +267,48 @@ class CloudTrax:
             exit(request.status_code)
 
         return self.users
+
+    def report_nodes(self):
+        """Return a string containing a pretty nodes report"""
+        report = 'Node statistics for the last 24 hours\n'
+        report += '-------------------------------------\n\n'
+
+        self.get_nodes()
+
+        report += 'Gateway nodes\n'
+        report += draw_table('gateway', self.nodes)
+        report += '\n\n'
+        report += 'Relay nodes\n'
+        report += draw_table('relay', self.nodes)
+        report += '\n\n'
+        report += 'Spare nodes\n'
+        report += draw_table('spare', self.nodes)
+        report += '\n\n'
+
+        return report
+
+    def report_users(self):
+        """Return a string containing a pretty user report"""
+        report = 'User statistics for the last 24 hours\n'
+        report += '-------------------------------------\n\n'
+        report += 'Users\n'
+
+        table = texttable.Texttable()
+        table.header(['Name\n(mac)',
+                      'Last seen on',
+                      'Blocked',
+                      'MB Down',
+                      'MB Up'])
+
+        self.get_users()
+
+        for user in self.users:
+            table.add_row(user.get_table_row())
+
+        report += table.draw()
+        report += '\n\n'
+
+        return report
 
 
 class Node:
@@ -392,10 +429,6 @@ class User:
 
         logging.debug('Creating user object for ' + self.values['mac'])
 
-    def get_type(self):
-        """Return a string that describes the object type."""
-        return 'user'
-
     def get_values(self):
         """Returns a bunch of values"""
         return self.values
@@ -477,25 +510,16 @@ if args.network:
     if not (args.network_status or args.usage):
         parser.error('What do you want to know?')
 
-    msg = 'Usage for the last 24 hours\n'
-    msg += '---------------------------\n'
-
     cloudtrax = CloudTrax(args.network[0])
     cloudtrax.login()
 
+    msg = ""
+
     if args.network_status:
-        cloudtrax.get_nodes()
-        msg += '\nGateway nodes\n' + draw_table('gateway',
-                                                cloudtrax.get_nodes())
-        msg += '\n\nRelay nodes\n' + draw_table('relay',
-                                                cloudtrax.get_nodes())
-        msg += '\n\nSpare nodes\n' + draw_table('spare',
-                                                cloudtrax.get_nodes())
+        msg += cloudtrax.report_nodes()
 
     if args.usage:
-        cloudtrax.get_users()
-        msg += '\n\nUsers\n' + draw_table('user',
-                                          cloudtrax.get_users())
+        msg += cloudtrax.report_users()
 
     if args.screen:
         logging.debug('Processing screen output')
