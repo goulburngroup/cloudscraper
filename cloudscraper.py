@@ -97,20 +97,13 @@ def percentage(value, max_value):
 # Objects
 #
 
-class CloudTrax:
-    """CloudTrax connector class"""
+class Config:
+    """Cloudscraper configuration class"""
 
-    def __init__(self, network):
+    def __init__(self, network, config_file):
         """Constructor"""
-        self.nodes = []
-        self.users = []
-
-        self.session = requests.session()
-
-        logging.info('Verbose output is turned on')
-
         config = ConfigParser.RawConfigParser()
-        config.read(CONFIG_FILE)
+        config.read(config_file)
 
         self.url = {'base': config.get('common', 'cloudtrax_url')}
 
@@ -123,6 +116,13 @@ class CloudTrax:
                      'checkin': self.url['base'] +
                              config.get('common', 'node_checkin_page')}
 
+        self.database = {'type': config.get('database', 'type')}
+
+        if self.database['type'] != "none":
+            self.database = {'database': config.get('database', 'database'),
+                             'username': config.get('database', 'username'),
+                             'password': config.get('database', 'password')}
+
         self.email = {'to': config.get('email', 'to'),
                       'from': config.get('email', 'from'),
                       'subject': config.get('email', 'subject'),
@@ -131,6 +131,39 @@ class CloudTrax:
         self.network = {'name': network,
                         'username': config.get(network, 'username'),
                         'password': config.get(network, 'password')}
+
+    def get_url(self):
+        """Return url config"""
+        return self.url
+
+    def get_database(self):
+        """Return database config"""
+        return self.database
+
+    def get_email(self):
+        """Return email config"""
+        return self.email
+
+    def get_network(self):
+        """Return network config"""
+        return self.network
+
+
+class CloudTrax:
+    """CloudTrax connector class"""
+
+    def __init__(self, config):
+        """Constructor"""
+        self.nodes = []
+        self.users = []
+
+        self.session = requests.session()
+
+        logging.info('Verbose output is turned on')
+
+        self.url = config.get_url()
+        self.network = config.get_network()
+
 
     def login(self):
         """Method to login and create a web session"""
@@ -191,10 +224,6 @@ class CloudTrax:
                                   checkin_img.size[0] - 2)
 
         return (time_as_gw, time_as_relay, time_offline)
-
-    def get_email_config(self):
-        """Return email details"""
-        return self.email
 
     def get_session(self):
         """Return session id"""
@@ -309,6 +338,14 @@ class CloudTrax:
         report += '\n\n'
 
         return report
+
+
+class Database:
+    """Database connector class"""
+
+    def __init__(self, config):
+        """Constructor"""
+        pass
 
 
 class Node:
@@ -507,10 +544,15 @@ if args.network:
         parser.error('No output defined')
 
     # We need to know what kind of information to include
-    if not (args.network_status or args.usage):
+    # TODO: by adding args.database here, we potentially have a problem
+    # if we also have args.screen or args.email as well. We might fix
+    # this by making those options mutally exclusive.
+    if not (args.database or args.network_status or args.usage):
         parser.error('What do you want to know?')
 
-    cloudtrax = CloudTrax(args.network[0])
+    config = Config(args.network[0], CONFIG_FILE)
+
+    cloudtrax = CloudTrax(config)
     cloudtrax.login()
 
     msg = ""
@@ -521,6 +563,10 @@ if args.network:
     if args.usage:
         msg += cloudtrax.report_users()
 
+    if args.database:
+        logging.info('Processing database output')
+        pass
+
     if args.screen:
         logging.info('Processing screen output')
         print msg
@@ -528,15 +574,15 @@ if args.network:
     if args.email:
         logging.info('Processing email output')
         email = MIMEText('<pre>' + msg + '</pre>', 'html')
-        email['Subject'] = cloudtrax.get_email_config()['subject']
-        email['From'] = cloudtrax.get_email_config()['from']
-        email['To'] = cloudtrax.get_email_config()['to']
+        email['Subject'] = config.get_email()['subject']
+        email['From'] = config.get_email()['from']
+        email['To'] = config.get_email()['to']
 
         # Send the message via our own SMTP server, but don't include the
         # envelope header.
-        mailer = smtplib.SMTP(cloudtrax.get_email_config()['server'])
-        mailer.sendmail(cloudtrax.get_email_config()['from'],
-                        cloudtrax.get_email_config()['to'].split(),
+        mailer = smtplib.SMTP(config.get_email()['server'])
+        mailer.sendmail(config.get_email()['from'],
+                        config.get_email()['to'].split(),
                         email.as_string())
         mailer.quit()
 
