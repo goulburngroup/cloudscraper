@@ -9,12 +9,29 @@
 
 """
 
-from psycopg2.extensions import AsIs
 import logging
+from psycopg2.extensions import AsIs
 import psycopg2
 
 class Database:
     """Database connector class"""
+
+    def __init__(self, config):
+
+        self.backend = None
+
+        if config['type'] == 'pgsql':
+            self.backend = Postgres(config)
+
+        else:
+            raise Exception('Database type is unknown.')
+
+    def id_exists(self, row_id):
+        return self.backend.exists("episodes", row_id)
+
+
+class Postgres:
+    """Postgres database class"""
 
     def __init__(self, config):
         """Constructor"""
@@ -23,18 +40,19 @@ class Database:
                                  timestamp timestamp NOT NULL default now(), \
                                  blocked   boolean NOT NULL, \
                                  name      varchar(40), \
+                                 mac       macaddr NOT NULL, \
                                  kbdown    integer NOT NULL, \
                                  kbup      integer NOT NULL, \
-                                 node      macaddr NOT NULL, \
-                                 mac       macaddr NOT NULL',
+                                 node      macaddr NOT NULL', \
                        'nodes': 'id        SERIAL primary key NOT NULL, \
                                  timestamp timestamp NOT NULL default now(), \
                                  type      smallint NOT NULL, \
                                  name      varchar(40), \
+                                 gateway   varchar(40), \
                                  mac       macaddr NOT NULL, \
-                                 mac       macaddr NOT NULL, \
-                                 mac       macaddr NOT NULL, \
-                                 mac       macaddr NOT NULL, \
+                                 kbdown    integer NOT NULL, \
+                                 kbup      integer NOT NULL, \
+                                 uptime    numeric(5,2) NOT NULL, \
                                  firmware  varchar(20) NOT NULL'}
 
         logging.info('Connecting to database')
