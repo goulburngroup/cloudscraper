@@ -4,6 +4,11 @@
  A tool to extract and archive usage information from the CloudTrax wifi mesh
 dashboard (cloudtrax.com).
 
+ Copyright (c) 2013 The Goulburn Group. All Rights Reserved.
+
+ Written by Alex Ferrara <alex@receptiveit.com.au>
+
+
 """
 
 from email.mime.text import MIMEText
