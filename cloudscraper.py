@@ -12,7 +12,6 @@ dashboard (cloudtrax.com).
 """
 
 from email.mime.text import MIMEText
-from BeautifulSoup import BeautifulSoup
 from lib.cloudtrax import CloudTrax
 from lib.config import Config
 from lib.database import Database
@@ -20,7 +19,6 @@ from lib.database import Database
 import argparse
 import logging
 import smtplib
-import texttable
 
 CONFIG_FILE = '/opt/cloudscraper/cloudscraper.conf'
 
