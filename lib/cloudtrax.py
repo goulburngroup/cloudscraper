@@ -49,8 +49,8 @@ def draw_table(entity_type, entities):
     table.header(header[entity_type])
 
     for entity in entities:
-        if entity.get_type() == entity_type:
-            table.add_row(entity.get_table_row())
+        if entities[entity].get_type() == entity_type:
+            table.add_row(entities[entity].get_table_row())
 
 
     return table.draw()
@@ -87,15 +87,17 @@ class CloudTrax:
 
     def __init__(self, config):
         """Constructor"""
-        self.nodes = []
-        self.users = []
-
         self.session = requests.session()
 
         logging.info('Verbose output is turned on')
 
         self.url = config.get_url()
         self.network = config.get_network()
+
+        self.login()
+
+        self.collect_nodes()
+        self.collect_users()
 
 
     def login(self):
@@ -164,25 +166,15 @@ class CloudTrax:
 
     def get_nodes(self):
         """Return a list of nodes"""
-
-        # Refresh the network status if the nodes list is empty
-        if len(self.nodes) == 0:
-            logging.info('Refreshing node status from CloudTrax')
-            self.refresh_nodes()
-
         return self.nodes
 
     def get_users(self):
         """Return network status"""
-        if len(self.users) == 0:
-            logging.info('Refreshing user statistics from CloudTrax')
-            self.refresh_users()
-
         return self.users
 
-    def refresh_nodes(self):
+    def collect_nodes(self):
         """Return network information scraped from CloudTrax"""
-        self.nodes = []
+        self.nodes = dict()
 
         parameters = {'network': self.network['name'],
                       'showall': '1',
@@ -197,8 +189,11 @@ class CloudTrax:
         if request.status_code == 200:
             for raw_values in distill_html(request.content, 'table',
                                            {'id': 'mytable'}):
-                self.nodes.append(Node(raw_values,
-                    self.get_checkin_data(raw_values[2][0])))
+
+                node = Node(raw_values,
+                            self.get_checkin_data(raw_values[2][0]))
+
+                self.nodes[node.get_name()] = node
 
         else:
             logging.error('Request failed') 
@@ -206,7 +201,7 @@ class CloudTrax:
 
         return self.nodes
 
-    def refresh_users(self):
+    def collect_users(self):
         """Return a list of wifi user statistics scraped from CloudTrax"""
         self.users = []
 
@@ -222,7 +217,12 @@ class CloudTrax:
         if request.status_code == 200:
             for raw_values in distill_html(request.content, 'table',
                                            {'class': 'inline sortable'}):
-                self.users.append(User(raw_values))
+
+                user = User(raw_values)
+
+                self.users.append(user)
+                self.nodes[user.get_node_name()].add_usage(user.get_dl(),
+                                                           user.get_ul())
 
         else:
             logging.error('Request failed') 
@@ -259,8 +259,8 @@ class CloudTrax:
         table.header(['Name\n(mac)',
                       'Last seen on',
                       'Blocked',
-                      'MB Down',
-                      'MB Up'])
+                      'DL MB',
+                      'UL MB'])
 
         self.get_users()
 

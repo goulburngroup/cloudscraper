@@ -55,9 +55,9 @@ class Node:
                        'ip': values[2][1],
                        'chan_24': values[3][0],
                        'chan_58': values[3][1],
-                       'users': values[4][0],
-                       'dl': values[5][0],
-                       'ul': values[5][1],
+                       'users': 0,
+                       'dl': 0,
+                       'ul': 0,
                        'uptime': values[6][0],
                        'fw_version': values[7][0],
                        'fw_name': values[7][1],
@@ -70,6 +70,16 @@ class Node:
                        'latency': values[12][0]}
 
         self.checkin_data = checkin_data
+
+    def add_usage(self, dl, ul):
+        """Add client usage data to node"""
+        self.values['dl'] += dl
+        self.values['ul'] += ul
+        self.values['users'] += 1
+
+    def get_name(self):
+        """Return the name of this node"""
+        return self.values['name']
 
     def get_mac(self):
         """Return the mac address of this node"""
@@ -99,8 +109,9 @@ class Node:
 
         if self.node_type == 'gateway' or self.node_type == 'spare':
             row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
-                   self.values['users'],
-                   self.values['dl'] + '\n(' + self.values['ul'] + ')',
+                   str(self.values['users']),
+                   '%.2f' % (float(self.values['dl']) / 1000) + '\n(' +
+                       '%.2f' % (float(self.values['ul']) / 1000) + ')',
                    '%.2f' % (self.checkin_data[0]) + '%\n(' + 
                        '%.2f' % (100 - self.checkin_data[0]) + '%)',
                    self.values['gateway_ip'] + '\n(' +
@@ -108,8 +119,9 @@ class Node:
 
         elif self.node_type == 'relay':
             row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
-                   self.values['users'],
-                   self.values['dl'] + '\n(' + self.values['ul'] + ')',
+                   str(self.values['users']),
+                   '%.2f' % (float(self.values['dl']) / 1000) + '\n(' +
+                       '%.2f' % (float(self.values['ul']) / 1000) + ')',
                    self.values['gateway_name'] + '\n(' + 
                        self.values['fw_version'] + ')',
                    '%.2f' % (self.checkin_data[1]) + '%\n(' + 

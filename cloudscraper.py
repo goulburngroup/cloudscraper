@@ -81,7 +81,6 @@ if args.network:
     config = Config(args.network[0], CONFIG_FILE)
 
     cloudtrax = CloudTrax(config)
-    cloudtrax.login()
 
     msg = ""
 
