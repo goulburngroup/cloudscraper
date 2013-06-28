@@ -48,14 +48,6 @@ parser.add_argument('-v', '--verbose',
                     action = 'store_true',
                     default = False, 
                     help = 'Be Verbose')
-parser.add_argument('-N', '--network-status',
-                    action = 'store_true',
-                    default = False,
-                    help = 'Get the network status')
-parser.add_argument('-U', '--usage',
-                    action = 'store_true',
-                    default = False,
-                    help = 'Get the usage statistics')
 args = parser.parse_args()
 
 # Set up logging
@@ -71,24 +63,14 @@ if args.network:
     if not (args.database or args.email or args.file or args.screen):
         parser.error('No output defined')
 
-    # We need to know what kind of information to include
-    # TODO: by adding args.database here, we potentially have a problem
-    # if we also have args.screen or args.email as well. We might fix
-    # this by making those options mutally exclusive.
-    if not (args.database or args.network_status or args.usage):
-        parser.error('What do you want to know?')
-
     config = Config(args.network[0], CONFIG_FILE)
 
     cloudtrax = CloudTrax(config)
 
     msg = ""
-
-    if args.network_status:
-        msg += cloudtrax.report_nodes()
-
-    if args.usage:
-        msg += cloudtrax.report_users()
+    msg += cloudtrax.report_summary()
+    msg += cloudtrax.report_nodes()
+    msg += cloudtrax.report_users()
 
     if args.database:
         logging.info('Processing database output')
