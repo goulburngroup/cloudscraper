@@ -87,6 +87,8 @@ class CloudTrax:
 
     def __init__(self, config):
         """Constructor"""
+        self.usage = [0, 0]
+
         self.session = requests.session()
 
         logging.info('Verbose output is turned on')
@@ -219,10 +221,15 @@ class CloudTrax:
                                            {'class': 'inline sortable'}):
 
                 user = User(raw_values)
+                usage_dl = user.get_dl()
+                usage_ul = user.get_ul()
 
                 self.users.append(user)
-                self.nodes[user.get_node_name()].add_usage(user.get_dl(),
-                                                           user.get_ul())
+                self.nodes[user.get_node_name()].add_usage(usage_dl,
+                                                           usage_ul)
+
+                self.usage[0] += usage_dl
+                self.usage[1] += usage_ul
 
         else:
             logging.error('Request failed') 
@@ -230,12 +237,22 @@ class CloudTrax:
 
         return self.users
 
+    def report_summary(self):
+        """Return a string containing a pretty summary report"""
+        report = 'Summary statistics for the last 24 hours\n'
+        report += '----------------------------------------\n\n'
+        report += "Total users: %d\n" % len(self.users)
+
+        report += "Total downloads (MB): %.2f\n" % (float(self.usage[0]) / 1000)
+        report += "Total uploads (MB): %.2f\n" % (float(self.usage[1]) / 1000)
+        report += '\n\n'
+
+        return report
+
     def report_nodes(self):
         """Return a string containing a pretty nodes report"""
         report = 'Node statistics for the last 24 hours\n'
         report += '-------------------------------------\n\n'
-
-        self.get_nodes()
 
         report += 'Gateway nodes\n'
         report += draw_table('gateway', self.nodes)
