@@ -58,6 +58,8 @@ class Node:
                        'users': 0,
                        'dl': 0,
                        'ul': 0,
+                       'gw_dl': 0,
+                       'gw_ul': 0,
                        'uptime': values[6][0],
                        'fw_version': values[7][0],
                        'fw_name': values[7][1],
@@ -71,11 +73,23 @@ class Node:
 
         self.checkin_data = checkin_data
 
-    def add_usage(self, dl, ul):
+    def add_gw_usage(self, kb_down, kb_up):
         """Add client usage data to node"""
-        self.values['dl'] += dl
-        self.values['ul'] += ul
+        self.values['gw_dl'] += kb_down
+        self.values['gw_ul'] += kb_up
+
+    def add_usage(self, kb_down, kb_up):
+        """Add client usage data to node"""
+        self.values['dl'] += kb_down
+        self.values['ul'] += kb_up
         self.values['users'] += 1
+
+        if self.node_type == 'gateway':
+            self.values['gw_dl'] += kb_down
+            self.values['gw_ul'] += kb_up
+            return 'self'
+        else:
+            return self.values['gateway_name']
 
     def get_name(self):
         """Return the name of this node"""
@@ -107,7 +121,19 @@ class Node:
         """Returns a list of items that match up to the screen text table
            for the node type"""
 
-        if self.node_type == 'gateway' or self.node_type == 'spare':
+        if self.node_type == 'gateway':
+            row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
+                   str(self.values['users']),
+                   '%.2f' % (float(self.values['dl']) / 1000) + '\n(' +
+                       '%.2f' % (float(self.values['ul']) / 1000) + ')',
+                   '%.2f' % (float(self.values['gw_dl']) / 1000) + '\n(' +
+                       '%.2f' % (float(self.values['gw_ul']) / 1000) + ')',
+                   '%.2f' % (self.checkin_data[0]) + '%\n(' + 
+                       '%.2f' % (100 - self.checkin_data[0]) + '%)',
+                   self.values['gateway_ip'] + '\n(' +
+                       self.values['fw_version'] + ')']
+
+        if self.node_type == 'spare':
             row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
                    str(self.values['users']),
                    '%.2f' % (float(self.values['dl']) / 1000) + '\n(' +

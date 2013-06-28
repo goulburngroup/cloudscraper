@@ -30,18 +30,19 @@ def draw_table(entity_type, entities):
 
     header = {'gateway': ['Name\n(mac)',
                           'Users',
-                          'DL MB\nUL MB',
+                          'DL MB\n(UL MB)',
+                          'GWDL MB\n(GWUL MB)',
                           'Up\n(Down)',
                           'IP Address\n(Firmware)'],
               'relay': ['Name\n(mac)',
                         'Users',
-                        'DL MB\nUL MB',
+                        'DL MB\n(UL MB)',
                         'Gateway\n(Firmware)',
                         'Up\n(Down)',
                         'Latency\n(Hops)'],
               'spare': ['Name\n(mac)',
                         'Users',
-                        'DL MB\nUL MB',
+                        'DL MB\n(UL MB)',
                         'Up\n(Down)',
                         'IP Address\n(Firmware)']}
 
@@ -52,8 +53,8 @@ def draw_table(entity_type, entities):
         if entities[entity].get_type() == entity_type:
             table.add_row(entities[entity].get_table_row())
 
-
     return table.draw()
+
 
 def distill_html(content, element, identifier):
     """Accept some HTML and return the filtered output"""
@@ -75,6 +76,7 @@ def distill_html(content, element, identifier):
 
     return distilled_text
 
+
 def percentage(value, max_value):
     """Returns a float representing the percentage that
        value is of max_value"""
@@ -87,6 +89,8 @@ class CloudTrax:
 
     def __init__(self, config):
         """Constructor"""
+        self.nodes = dict()
+        self.users = []
         self.usage = [0, 0]
 
         self.session = requests.session()
@@ -176,7 +180,6 @@ class CloudTrax:
 
     def collect_nodes(self):
         """Return network information scraped from CloudTrax"""
-        self.nodes = dict()
 
         parameters = {'network': self.network['name'],
                       'showall': '1',
@@ -205,7 +208,6 @@ class CloudTrax:
 
     def collect_users(self):
         """Return a list of wifi user statistics scraped from CloudTrax"""
-        self.users = []
 
         parameters = {'network': self.network['name']}
     
@@ -225,8 +227,11 @@ class CloudTrax:
                 usage_ul = user.get_ul()
 
                 self.users.append(user)
-                self.nodes[user.get_node_name()].add_usage(usage_dl,
-                                                           usage_ul)
+                gateway = self.nodes[user.get_node_name()].add_usage(usage_dl,
+                                                                     usage_ul)
+
+                if gateway != 'self':
+                    self.nodes[gateway].add_gw_usage(usage_dl, usage_ul)
 
                 self.usage[0] += usage_dl
                 self.usage[1] += usage_ul
