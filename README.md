@@ -27,26 +27,35 @@ PostgreSQL
 ----------
 
 Install PostgreSQL
+
     # apt-get install postgresql
 
 Log into the database server
+
     # psql -d template1 -U postgres
     psql (9.1.6, server 9.1.9)
     Type "help" for help.
-
+    
     template1=#
 
 Create database user
+
     template1=# CREATE USER scraper WITH PASSWORD 'secretpassword';
 
 Create database
+
     template1=# CREATE DATABASE cloudscraper;
 
 Grant privileges on database
+
     template1=# GRANT ALL PRIVILEGES ON DATABASE cloudscraper TO scraper;
 
-* If your database is on a different host to the script, you may need to modify
-  pg_hba.conf
+If your database is on a different host to the script, you may need to modify pg_hba.conf.
+In the following example we are allowing the entire 192.168.0.0/255.255.255.0 network to
+connect to the 'cloudscraper' database as user 'scraper' using md5 authentication.
+
+    # TYPE  DATABASE        USER            ADDRESS                 METHOD
+    host    cloudscraper    scraper         192.168.0.0/24          md5
 
 CloudTrax notes
 ===============
