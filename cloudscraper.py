@@ -76,6 +76,8 @@ if args.network:
         logging.info('Processing database output')
         database = Database(config.get_db())
 
+        database.add_records(cloudtrax.get_nodes())
+
     if args.screen:
         logging.info('Processing screen output')
         print msg

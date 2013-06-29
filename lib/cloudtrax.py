@@ -163,8 +163,9 @@ class CloudTrax:
                                    checkin_img.size[0] - 2)
         time_offline = percentage(colour_counter['cccccc'],
                                   checkin_img.size[0] - 2)
+        time_online = time_as_gw + time_as_relay
 
-        return (time_as_gw, time_as_relay, time_offline)
+        return (time_as_gw, time_as_relay, time_offline, time_online)
 
     def get_session(self):
         """Return session id"""

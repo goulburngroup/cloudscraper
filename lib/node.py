@@ -49,7 +49,8 @@ class Node:
             self.node_type = 'spare'
             self.node_status = 'down'
 
-        self.values = {'name': values[1][0],
+        self.values = {'status': values[0][0],
+                       'name': values[1][0],
                        'comment': values[1][-1],
                        'mac': values[2][0],
                        'ip': values[2][1],
@@ -61,6 +62,7 @@ class Node:
                        'gw_dl': 0,
                        'gw_ul': 0,
                        'uptime': values[6][0],
+                       'uptime_percent': checkin_data[3],
                        'fw_version': values[7][0],
                        'fw_name': values[7][1],
                        'load': values[8][0],
@@ -155,3 +157,7 @@ class Node:
                    self.values['latency'] + 'ms\n(' + self.values['hops'] + ')']
 
         return row
+
+    def get_values(self):
+        """Return all values of this node"""
+        return self.values

@@ -28,8 +28,9 @@ class Database:
         else:
             raise Exception('Database type is unknown.')
 
-    def id_exists(self, row_id):
-        return self.backend.exists("episodes", row_id)
+    def add_records(self, nodes):
+        """Add a node in the database"""
+        return self.backend.add_records(nodes)
 
 
 class Postgres:
@@ -48,10 +49,13 @@ class Postgres:
                                  node      macaddr NOT NULL', \
                        'nodes': 'id        SERIAL primary key NOT NULL, \
                                  timestamp timestamp NOT NULL default now(), \
-                                 type      smallint NOT NULL, \
+                                 status    smallint NOT NULL, \
                                  name      varchar(40), \
                                  gateway   varchar(40), \
                                  mac       macaddr NOT NULL, \
+                                 users     smallint NOT NULL, \
+                                 gwkbdown  integer NOT NULL, \
+                                 gwkbup    integer NOT NULL, \
                                  kbdown    integer NOT NULL, \
                                  kbup      integer NOT NULL, \
                                  uptime    numeric(5,2) NOT NULL, \
@@ -71,6 +75,14 @@ class Postgres:
         self.create_schema()
 
 
+    def add_records(self, nodes):
+        """Add a node in the Postgres database"""
+
+        for node in nodes:
+            self.cursor.execute("""INSERT INTO nodes(status, name, gateway, mac, users, gwkbdown, gwkbup, kbdown, kbup, uptime, firmware) VALUES (%(status)s, %(name)s, %(gateway_name)s, %(mac)s, %(users)s, %(gw_dl)s, %(gw_ul)s, %(dl)s, %(ul)s, %(uptime_percent)s, %(fw_version)s)""", nodes[node].get_values())
+
+        self.conn.commit()
+
     def table_exists(self, table):
         """Check if a particular table exists in the database"""
 
@@ -79,6 +91,7 @@ class Postgres:
         self.cursor.execute('SELECT * FROM information_schema.tables WHERE table_name=%s', (table,))
 
         return bool(self.cursor.rowcount)
+
 
     def create_schema(self):
         """Create the current database schema if it doesn't exist"""
