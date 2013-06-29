@@ -26,8 +26,8 @@ class User:
                        'rssi': values[3][0],
                        'rate': values[4][0],
                        'MCS': values[4][1],
-                       'kb_down': int(values[5][0].replace(',', '')),
-                       'kb_up': int(values[6][0].replace(',', '')),
+                       'dl': int(values[5][0].replace(',', '')),
+                       'ul': int(values[6][0].replace(',', '')),
                        'blocked': values[8][0]}
 
         logging.info('Creating user object for ' + self.values['mac'])
@@ -42,10 +42,14 @@ class User:
         row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
                self.values['node_name'] + '\n(' + self.values['node_mac'] + ')',
                self.values['blocked'],
-               '%.2f' % (float(self.values['kb_down']) / 1000),
-               '%.2f' % (float(self.values['kb_up']) / 1000)]
+               '%.2f' % (float(self.values['dl']) / 1000),
+               '%.2f' % (float(self.values['ul']) / 1000)]
 
         return row
+
+    def get_mac(self):
+        """Returns the mac address of the client"""
+        return self.values['mac']
 
     def get_node_name(self):
         """Returns the name of the node this client was last
@@ -60,9 +64,9 @@ class User:
     def get_dl(self):
         """Returns an integer representing the number of kilobytes downloaded 
            in the past 24hrs"""
-        return self.values['kb_down']
+        return self.values['dl']
 
     def get_ul(self):
         """Returns an integer representing the number of kilobytes uploaded
            in the past 24hrs"""
-        return self.values['kb_up']
+        return self.values['ul']

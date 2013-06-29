@@ -90,7 +90,7 @@ class CloudTrax:
     def __init__(self, config):
         """Constructor"""
         self.nodes = dict()
-        self.users = []
+        self.users = dict()
         self.usage = [0, 0]
 
         self.session = requests.session()
@@ -227,7 +227,8 @@ class CloudTrax:
                 usage_dl = user.get_dl()
                 usage_ul = user.get_ul()
 
-                self.users.append(user)
+                self.users[user.get_mac()] = user
+
                 gateway = self.nodes[user.get_node_name()].add_usage(usage_dl,
                                                                      usage_ul)
 
@@ -288,7 +289,7 @@ class CloudTrax:
         self.get_users()
 
         for user in self.users:
-            table.add_row(user.get_table_row())
+            table.add_row(self.users[user].get_table_row())
 
         report += table.draw()
         report += '\n\n'

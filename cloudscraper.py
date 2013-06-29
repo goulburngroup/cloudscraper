@@ -76,7 +76,7 @@ if args.network:
         logging.info('Processing database output')
         database = Database(config.get_db())
 
-        database.add_records(cloudtrax.get_nodes())
+        database.add_records(cloudtrax.get_nodes(), cloudtrax.get_users())
 
     if args.screen:
         logging.info('Processing screen output')

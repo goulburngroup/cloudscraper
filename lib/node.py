@@ -75,20 +75,20 @@ class Node:
 
         self.checkin_data = checkin_data
 
-    def add_gw_usage(self, kb_down, kb_up):
+    def add_gw_usage(self, dl, ul):
         """Add client usage data to node"""
-        self.values['gw_dl'] += kb_down
-        self.values['gw_ul'] += kb_up
+        self.values['gw_dl'] += dl
+        self.values['gw_ul'] += ul
 
-    def add_usage(self, kb_down, kb_up):
+    def add_usage(self, dl, ul):
         """Add client usage data to node"""
-        self.values['dl'] += kb_down
-        self.values['ul'] += kb_up
+        self.values['dl'] += dl
+        self.values['ul'] += ul
         self.values['users'] += 1
 
         if self.node_type == 'gateway':
-            self.values['gw_dl'] += kb_down
-            self.values['gw_ul'] += kb_up
+            self.values['gw_dl'] += dl
+            self.values['gw_ul'] += ul
             return 'self'
         else:
             return self.values['gateway_name']

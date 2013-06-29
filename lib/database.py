@@ -28,9 +28,9 @@ class Database:
         else:
             raise Exception('Database type is unknown.')
 
-    def add_records(self, nodes):
+    def add_records(self, nodes, users):
         """Add a node in the database"""
-        return self.backend.add_records(nodes)
+        return self.backend.add_records(nodes, users)
 
 
 class Postgres:
@@ -75,11 +75,14 @@ class Postgres:
         self.create_schema()
 
 
-    def add_records(self, nodes):
+    def add_records(self, nodes, users):
         """Add a node in the Postgres database"""
 
         for node in nodes:
             self.cursor.execute("""INSERT INTO nodes(status, name, gateway, mac, users, gwkbdown, gwkbup, kbdown, kbup, uptime, firmware) VALUES (%(status)s, %(name)s, %(gateway_name)s, %(mac)s, %(users)s, %(gw_dl)s, %(gw_ul)s, %(dl)s, %(ul)s, %(uptime_percent)s, %(fw_version)s)""", nodes[node].get_values())
+
+        for user in users:
+            self.cursor.execute("""INSERT INTO users(blocked, name, mac, kbdown, kbup, node) VALUES (%(blocked)s, %(name)s, %(mac)s, %(dl)s, %(ul)s, %(node_mac)s)""", users[user].get_values())
 
         self.conn.commit()
 
