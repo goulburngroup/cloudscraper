@@ -19,11 +19,34 @@ Debian/Ubuntu
 
 You should already have Python installed, but you will need to install some modules
 
-    apt-get install python-beautifulsoup python-configobj python-imaging
-    apt-get install python-mailer python-pip python-requests 
-    pip install texttable
+    # apt-get install python-beautifulsoup python-configobj python-imaging
+    # apt-get install python-mailer python-pip python-requests 
+    # pip install texttable
 
+PostgreSQL
+----------
 
+Install PostgreSQL
+    # apt-get install postgresql
+
+Log into the database server
+    # psql -d template1 -U postgres
+    psql (9.1.6, server 9.1.9)
+    Type "help" for help.
+
+    template1=#
+
+Create database user
+    template1=# CREATE USER scraper WITH PASSWORD 'secretpassword';
+
+Create database
+    template1=# CREATE DATABASE cloudscraper;
+
+Grant privileges on database
+    template1=# GRANT ALL PRIVILEGES ON DATABASE cloudscraper TO scraper;
+
+* If your database is on a different host to the script, you may need to modify
+  pg_hba.conf
 
 CloudTrax notes
 ===============
