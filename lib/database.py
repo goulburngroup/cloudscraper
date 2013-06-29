@@ -79,10 +79,44 @@ class Postgres:
         """Add a node in the Postgres database"""
 
         for node in nodes:
-            self.cursor.execute("""INSERT INTO nodes(status, name, gateway, mac, users, gwkbdown, gwkbup, kbdown, kbup, uptime, firmware) VALUES (%(status)s, %(name)s, %(gateway_name)s, %(mac)s, %(users)s, %(gw_dl)s, %(gw_ul)s, %(dl)s, %(ul)s, %(uptime_percent)s, %(fw_version)s)""", nodes[node].get_values())
+            self.cursor.execute("""INSERT INTO nodes(status,
+                                                     name,
+                                                     gateway,
+                                                     mac,
+                                                     users,
+                                                     gwkbdown,
+                                                     gwkbup,
+                                                     kbdown,
+                                                     kbup,
+                                                     uptime,
+                                                     firmware)
+                                             VALUES (%(status)s,
+                                                     %(name)s,
+                                                     %(gateway_name)s,
+                                                     %(mac)s,
+                                                     %(users)s,
+                                                     %(gw_dl)s,
+                                                     %(gw_ul)s,
+                                                     %(dl)s,
+                                                     %(ul)s,
+                                                     %(uptime_percent)s,
+                                                     %(fw_version)s)""",
+                                                     nodes[node].get_values())
 
         for user in users:
-            self.cursor.execute("""INSERT INTO users(blocked, name, mac, kbdown, kbup, node) VALUES (%(blocked)s, %(name)s, %(mac)s, %(dl)s, %(ul)s, %(node_mac)s)""", users[user].get_values())
+            self.cursor.execute("""INSERT INTO users(blocked,
+                                                     name,
+                                                     mac,
+                                                     kbdown,
+                                                     kbup,
+                                                     node)
+                                             VALUES (%(blocked)s,
+                                                     %(name)s,
+                                                     %(mac)s,
+                                                     %(dl)s,
+                                                     %(ul)s,
+                                                     %(node_mac)s)""",
+                                                     users[user].get_values())
 
         self.conn.commit()
 
@@ -91,7 +125,8 @@ class Postgres:
 
         logging.info('Checking if table "%s" exists', table)
 
-        self.cursor.execute('SELECT * FROM information_schema.tables WHERE table_name=%s', (table,))
+        self.cursor.execute('SELECT * FROM information_schema.tables \
+                                     WHERE table_name=%s', (table,))
 
         return bool(self.cursor.rowcount)
 
@@ -104,7 +139,8 @@ class Postgres:
 
                 logging.info('Creating "%s" table', table)
 
-                self.cursor.execute("CREATE TABLE %s (%s);", (AsIs(table), AsIs(self.schema[table])))
+                self.cursor.execute("CREATE TABLE %s (%s);",
+                                   (AsIs(table), AsIs(self.schema[table])))
 
                 self.conn.commit()
             else:
