@@ -21,6 +21,7 @@ from lib.config import Config
 from lib.database import Database
 
 import argparse
+import datetime
 import logging
 import smtplib
 
@@ -93,6 +94,9 @@ if args.network:
         email_from = config.get_email()['from']
         email_to = config.get_email()['to']
 
+        usage = cloudtrax.get_usage()
+        today = datetime.date.today()
+
         email = MIMEMultipart('related')
         email['Subject'] = email_subject
         email['From'] = email_from
@@ -109,18 +113,23 @@ if args.network:
         #msg_text = MIMEText('This is the alternative plain text message.')
         #msg_alternative.attach(msg_text)
 
-        usage = cloudtrax.get_usage()
+        # TODO: This should be moved to the configuration file.
+        graphs = [['node', '24hr node usage', False, 'png'],
+                  ['node', '24hr internet usage', True, 'png'],
+                  ['user', '24hr internet usage', True, 'png']]
 
         html_part = "<h2>%s</h2>" % config.get_email()['title']
+        html_part += "<h3>%s</h3>" % today.strftime('%A, %d %B %Y')`
         html_part += '<br>'
         html_part += "<b>Total users:</b> %s<br>" % len(users)
         html_part += '<br>'
         html_part += "<b>Total downloads:</b> %s <i>KB</i><br>" % '{:,}'.format(usage[0])
         html_part += "<b>Total uploads:</b> %s <i>KB</i><br>" % '{:,}'.format(usage[1])
         html_part += '<br>'
-        html_part += '<img src="cid:image1">'
-        html_part += '<img src="cid:image2">'
-        html_part += '<img src="cid:image3">'
+
+        for count in range(len(graphs)):
+            html_part += "<img src=\"cid:image%s\">" % (count + 1)
+
         html_part += '<br>'
         html_part += '<pre>'
         html_part += msg
@@ -128,10 +137,6 @@ if args.network:
 
         msg_text = MIMEText(html_part, 'html')
         msg_alternative.attach(msg_text)
-
-        graphs = [['node', '24hr node usage', False, 'png'],
-                  ['node', '24hr internet usage', True, 'png'],
-                  ['user', '24hr internet usage', True, 'png']]
 
         counter = 1
 
