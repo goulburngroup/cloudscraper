@@ -97,8 +97,9 @@ class CloudTrax:
 
         logging.info('Verbose output is turned on')
 
-        self.url = config.get_url()
-        self.network = config.get_network()
+        self.config = config
+        self.url = self.config.get_url()
+        self.network = self.config.get_network()
 
         self.login()
 
