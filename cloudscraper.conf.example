@@ -17,7 +17,14 @@ to = user@yourdomain.com.au
 from = cloudscraper@yourdomain.com.au
 subject = CloudScraper Statistics
 server = mail.yourdomain.com.au
+title = Email Report Title
+;username = set_your_username
+;password = set_your_password
 
 [set_your_network]
 username = set_your_username
 password = set_your_password
+
+[default_gateway]
+quota = 5000000
+email = user@yourdomain.com.au
