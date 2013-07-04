@@ -115,8 +115,8 @@ if args.network:
         html_part += '<br>'
         html_part += "<b>Total users:</b> %s<br>" % len(users)
         html_part += '<br>'
-        html_part += "<b>Total downloads:</b> %s<br>" % usage[0]
-        html_part += "<b>Total uploads:</b> %s<br>" % usage[1]
+        html_part += "<b>Total downloads:</b> %s <i>KB</i><br>" % '{:,}'.format(usage[0])
+        html_part += "<b>Total uploads:</b> %s <i>KB</i><br>" % '{:,}'.format(usage[1])
         html_part += '<br>'
         html_part += '<img src="cid:image1">'
         html_part += '<img src="cid:image2">'
