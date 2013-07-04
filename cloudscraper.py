@@ -118,14 +118,14 @@ if args.network:
                   ['node', '24hr internet usage', True, 'png'],
                   ['user', '24hr internet usage', True, 'png']]
 
-        html_part = "<h2>%s</h2>" % config.get_email()['title']
-        html_part += "<h3>%s</h3>" % today.strftime('%A, %d %B %Y')
-        html_part += '<br>'
-        html_part += "<b>Total users:</b> %s<br>" % len(users)
-        html_part += '<br>'
-        html_part += "<b>Total downloads:</b> %s <i>KB</i><br>" % '{:,}'.format(usage[0])
-        html_part += "<b>Total uploads:</b> %s <i>KB</i><br>" % '{:,}'.format(usage[1])
-        html_part += '<br>'
+        html_part = "<h2>%s</h2>\n" % config.get_email()['title']
+        html_part += "<h3>%s</h3>\n" % today.strftime('%A, %d %B %Y')
+        html_part += '<br>\n'
+        html_part += "<b>Total users:</b> %s<br>\n" % len(users)
+        html_part += '<br>\n'
+        html_part += "<b>Total downloads:</b> %s <i>KB</i><br>\n" % '{:,}'.format(usage[0])
+        html_part += "<b>Total uploads:</b> %s <i>KB</i><br>\n" % '{:,}'.format(usage[1])
+        html_part += '<br>\n'
 
         for count in range(len(graphs)):
             html_part += "<img src=\"cid:image%s\">" % (count + 1)
