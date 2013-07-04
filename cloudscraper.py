@@ -13,7 +13,9 @@ dashboard (cloudtrax.com).
 
 """
 
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 from lib.cloudtrax import CloudTrax
 from lib.config import Config
 from lib.database import Database
@@ -86,17 +88,73 @@ if args.network:
 
     if args.email:
         logging.info('Processing email output')
-        email = MIMEText('<pre>' + msg + '</pre>', 'html')
-        email['Subject'] = config.get_email()['subject']
-        email['From'] = config.get_email()['from']
-        email['To'] = config.get_email()['to']
 
-        # Send the message via our own SMTP server, but don't include the
-        # envelope header.
+        email_subject = config.get_email()['subject']
+        email_from = config.get_email()['from']
+        email_to = config.get_email()['to']
+
+        email = MIMEMultipart('related')
+        email['Subject'] = email_subject
+        email['From'] = email_from
+        email['To'] = email_to
+        email.preamble = 'This is a multi-part message in MIME format.'
+
+        # Encapsulate the plain and HTML versions of the message body
+        # in an 'alternative' part, so message agents can decide which
+        # they want to display.
+
+        msg_alternative = MIMEMultipart('alternative')
+        email.attach(msg_alternative)
+
+        #msg_text = MIMEText('This is the alternative plain text message.')
+        #msg_alternative.attach(msg_text)
+
+        usage = cloudtrax.get_usage()
+
+        html_part = "<h2>%s</h2>" % config.get_email()['title']
+        html_part += '<br>'
+        html_part += "<b>Total users:</b> %s<br>" % len(users)
+        html_part += '<br>'
+        html_part += "<b>Total downloads:</b> %s<br>" % usage[0]
+        html_part += "<b>Total uploads:</b> %s<br>" % usage[1]
+        html_part += '<br>'
+        html_part += '<img src="cid:image1">'
+        html_part += '<img src="cid:image2">'
+        html_part += '<img src="cid:image3">'
+        html_part += '<br>'
+        html_part += '<pre>'
+        html_part += msg
+        html_part += '</pre>'
+
+        msg_text = MIMEText(html_part, 'html')
+        msg_alternative.attach(msg_text)
+
+        graphs = [['node', '24hr node usage', False, 'png'],
+                  ['node', '24hr internet usage', True, 'png'],
+                  ['user', '24hr internet usage', True, 'png']]
+
+        counter = 1
+
+        for graph in graphs:
+            image = cloudtrax.graph(graph[0], graph[1], graph[2], graph[3])
+
+            msg_image = MIMEImage(image)
+            msg_image.add_header('Content-ID', "<image%s>" % counter)
+
+            email.attach(msg_image)
+
+            counter += 1
+
+        logging.info('Connecting to SMTP server')
+
         mailer = smtplib.SMTP(config.get_email()['server'])
-        mailer.sendmail(config.get_email()['from'],
-                        config.get_email()['to'].split(),
-                        email.as_string())
+
+        if 'username' in config.get_email().keys():
+            logging.info('Authenticating to SMTP server')
+            mailer.login(config.get_email()['username'],
+                         config.get_email()['password'])
+
+        mailer.sendmail(email_from, email_to.split(), email.as_string())
         mailer.quit()
 
     if args.file:

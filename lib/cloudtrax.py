@@ -18,6 +18,7 @@ import cStringIO
 import logging
 import requests
 import texttable
+import pygal
 import Image
 
 
@@ -173,12 +174,16 @@ class CloudTrax:
         return self.session
 
     def get_nodes(self):
-        """Return a list of nodes"""
+        """Return a list of node objects"""
         return self.nodes
 
     def get_users(self):
-        """Return network status"""
+        """Return a list of user objects"""
         return self.users
+
+    def get_usage(self):
+        """Return network usage"""
+        return self.usage
 
     def collect_nodes(self):
         """Return network information scraped from CloudTrax"""
@@ -244,6 +249,44 @@ class CloudTrax:
             exit(request.status_code)
 
         return self.users
+
+    def graph(self, graph_type, title, arg, img_format='svg'):
+        """Return a rendered graph"""
+        
+        if graph_type == 'node':
+            graph = self.graph_node_usage(arg)
+        elif graph_type == 'user':
+            graph = self.graph_user_usage()
+
+        graph.title = title
+
+        if img_format == 'png':
+            return graph.render_to_png()
+
+        return graph.render()
+
+    def graph_node_usage(self, gw_only=False):
+        """Return a node graph"""
+
+        graph_object = pygal.Pie()
+
+        for node in self.nodes:
+            if self.nodes[node].is_gateway() or (not gw_only and \
+                                                 self.nodes[node].is_relay()):
+                graph_object.add(node, self.nodes[node].get_usage())
+
+        return graph_object
+
+    def graph_user_usage(self, gw_only=False):
+        """Return a user graph"""
+
+        graph_object = pygal.XY(stroke=False)
+
+        for user in self.users:
+            graph_object.add(user, [(self.users[user].get_dl(),
+                                    self.users[user].get_ul())])
+
+        return graph_object
 
     def report_summary(self):
         """Return a string containing a pretty summary report"""
