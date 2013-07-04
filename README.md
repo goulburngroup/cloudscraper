@@ -10,6 +10,10 @@ Requirements
 * Beautiful Soup - HTML parser
 * ConfigObj - Config file reader
 * PIL - Python Imaging Library to read and decode images
+* pyGal - Python SVG charts creator
+* CairoSVG - Convert SVG image to PNG, PDF and PS
+* TinyCSS - CSS parser for Python
+* CSSselect - CSS selectors for Python
 * Requests - HTTP library
 * SMTPlib - SMTP library
 * Texttable - Simple text table formatting library
