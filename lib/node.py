@@ -76,7 +76,7 @@ class Node:
         self.checkin_data = checkin_data
 
     def add_gw_usage(self, dl, ul):
-        """Add client usage data to node"""
+        """Add internet usage to node"""
         self.values['gw_dl'] += dl
         self.values['gw_ul'] += ul
 
@@ -86,7 +86,7 @@ class Node:
         self.values['ul'] += ul
         self.values['users'] += 1
 
-        if self.node_type == 'gateway':
+        if self.is_gateway():
             self.values['gw_dl'] += dl
             self.values['gw_ul'] += ul
             return 'self'
@@ -123,7 +123,7 @@ class Node:
         """Returns a list of items that match up to the screen text table
            for the node type"""
 
-        if self.node_type == 'gateway':
+        if self.is_gateway():
             row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
                    str(self.values['users']),
                    '%.2f' % (float(self.values['dl']) / 1000) + '\n(' +
@@ -135,7 +135,7 @@ class Node:
                    self.values['gateway_ip'] + '\n(' +
                        self.values['fw_version'] + ')']
 
-        if self.node_type == 'spare':
+        if self.is_spare():
             row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
                    str(self.values['users']),
                    '%.2f' % (float(self.values['dl']) / 1000) + '\n(' +
@@ -145,7 +145,7 @@ class Node:
                    self.values['gateway_ip'] + '\n(' +
                        self.values['fw_version'] + ')']
 
-        elif self.node_type == 'relay':
+        elif self.is_relay():
             row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
                    str(self.values['users']),
                    '%.2f' % (float(self.values['dl']) / 1000) + '\n(' +
@@ -161,3 +161,23 @@ class Node:
     def get_values(self):
         """Return all values of this node"""
         return self.values
+
+    def get_gw_usage(self):
+        """Return the internet usage for this node"""
+        return (self.values['gw_dl'], self.values['gw_ul'])
+
+    def get_usage(self):
+        """Return the data transfer for this node"""
+        return (self.values['dl'], self.values['ul'])
+
+    def is_gateway(self):
+        """Return True if node is a gateway node"""
+        return self.node_type == 'gateway'
+
+    def is_relay(self):
+        """Return True if node is a relay node"""
+        return self.node_type == 'relay'
+
+    def is_spare(self):
+        """Return True if node is a spare node"""
+        return self.node_type == 'spare'
