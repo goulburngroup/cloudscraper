@@ -66,6 +66,8 @@ if args.network:
     config = Config(args.network[0], CONFIG_FILE)
 
     cloudtrax = CloudTrax(config)
+    nodes = cloudtrax.get_nodes()
+    users = cloudtrax.get_users()
 
     msg = ""
     msg += cloudtrax.report_summary()
@@ -76,7 +78,7 @@ if args.network:
         logging.info('Processing database output')
         database = Database(config.get_db())
 
-        database.add_records(cloudtrax.get_nodes(), cloudtrax.get_users())
+        database.add_records(nodes, users)
 
     if args.screen:
         logging.info('Processing screen output')
