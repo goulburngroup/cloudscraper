@@ -257,6 +257,9 @@ class CloudTrax:
             graph = self.graph_node_usage(arg)
         elif graph_type == 'user':
             graph = self.graph_user_usage()
+        else:
+            logging.error('Unknown graph type')
+            exit(1)
 
         graph.title = title
 
@@ -271,8 +274,10 @@ class CloudTrax:
         graph_object = pygal.Pie()
 
         for node in self.nodes:
-            if self.nodes[node].is_gateway() or (not gw_only and \
-                                                 self.nodes[node].is_relay()):
+            if gw_only:
+                if self.nodes[node].is_gateway():
+                    graph_object.add(node, self.nodes[node].get_gw_usage())
+            else:
                 graph_object.add(node, self.nodes[node].get_usage())
 
         return graph_object
