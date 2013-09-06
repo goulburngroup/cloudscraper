@@ -13,17 +13,14 @@ dashboard (cloudtrax.com).
 
 """
 
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.image import MIMEImage
 from lib.cloudtrax import CloudTrax
 from lib.config import Config
 from lib.database import Database
+from lib.mail import Email
 
 import argparse
 import datetime
 import logging
-import smtplib
 
 CONFIG_FILE = '/opt/cloudscraper/cloudscraper.conf'
 
@@ -97,28 +94,10 @@ if args.network:
     if args.email:
         logging.info('Processing email output')
 
-        email_subject = config.get_email()['subject']
-        email_from = config.get_email()['from']
-        email_to = config.get_email()['to']
+        email = Email(config.get_email())
 
         usage = cloudtrax.get_usage()
         today = datetime.date.today()
-
-        email = MIMEMultipart('related')
-        email['Subject'] = email_subject
-        email['From'] = email_from
-        email['To'] = email_to
-        email.preamble = 'This is a multi-part message in MIME format.'
-
-        # Encapsulate the plain and HTML versions of the message body
-        # in an 'alternative' part, so message agents can decide which
-        # they want to display.
-
-        msg_alternative = MIMEMultipart('alternative')
-        email.attach(msg_alternative)
-
-        #msg_text = MIMEText('This is the alternative plain text message.')
-        #msg_alternative.attach(msg_text)
 
         # TODO: This should be moved to the configuration file.
         graphs = [['node', '24hr node usage', False, 'png'],
@@ -142,32 +121,13 @@ if args.network:
         html_part += msg
         html_part += '</pre>'
 
-        msg_text = MIMEText(html_part, 'html')
-        msg_alternative.attach(msg_text)
-
-        counter = 1
+        email.attach_html(html_part)
 
         for graph in graphs:
             image = cloudtrax.graph(graph[0], graph[1], graph[2], graph[3])
+            email.attach_image(image)
 
-            msg_image = MIMEImage(image)
-            msg_image.add_header('Content-ID', "<image%s>" % counter)
-
-            email.attach(msg_image)
-
-            counter += 1
-
-        logging.info('Connecting to SMTP server')
-
-        mailer = smtplib.SMTP(config.get_email()['server'])
-
-        if 'username' in config.get_email().keys():
-            logging.info('Authenticating to SMTP server')
-            mailer.login(config.get_email()['username'],
-                         config.get_email()['password'])
-
-        mailer.sendmail(email_from, email_to.split(), email.as_string())
-        mailer.quit()
+        email.send()
 
 elif args.report:
     logging.info('Producing report - %s' % args.report[0])
@@ -181,8 +141,16 @@ elif args.report:
     else:
         interval = '1 day'
 
+    msg = "<pre>"
     for record in database.get_past_stats(interval):
-        print record
+        msg += "%s - %s users - %s kb downloaded - %s kb uploaded\n" % record
+
+    msg += "</pre>"
+
+    if args.email:
+        email = Email(config.get_email())
+        email.attach_html(msg)
+        email.send()
 else:
     parser.error('You must provide a network to scrape or a report to produce')
 
