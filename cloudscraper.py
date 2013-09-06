@@ -37,9 +37,6 @@ parser.add_argument('-e', '--email',
                     action = 'store_true',
                     default = False, 
                     help = 'Email the output')
-parser.add_argument('-f', '--file',
-                    nargs = 1, 
-                    help = 'Store the output to a file')
 parser.add_argument('-n', '--network',
                     nargs = 1, 
                     help = 'The wifi network name on CloudTrax')
@@ -63,7 +60,7 @@ else:
 
 if args.network:
     # We need to know to output the result
-    if not (args.database or args.email or args.file or args.screen):
+    if not (args.database or args.email or args.screen):
         parser.error('No output defined')
 
     config = Config(args.network[0], CONFIG_FILE)
@@ -162,11 +159,6 @@ if args.network:
         mailer.sendmail(email_from, email_to.split(), email.as_string())
         mailer.quit()
 
-    if args.file:
-        logging.info('Processing file output')
-        fileout = open(args.file[0], 'w')
-        fileout.write(msg)
-        fileout.close()
 
 else:
     parser.error('You must provide a network')
