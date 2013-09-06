@@ -58,12 +58,14 @@ else:
     logging.basicConfig(level=logging.WARNING,
                         format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Parse configuration file
+config = Config(CONFIG_FILE)
+
 if args.network:
     # We need to know to output the result
     if not (args.database or args.email or args.screen):
         parser.error('No output defined')
 
-    config = Config(args.network[0], CONFIG_FILE)
 
     cloudtrax = CloudTrax(config)
     nodes = cloudtrax.get_nodes()

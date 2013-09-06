@@ -16,7 +16,7 @@ import ConfigParser
 class Config:
     """Cloudscraper configuration class"""
 
-    def __init__(self, network, config_file):
+    def __init__(self, config_file):
         """Constructor"""
         self.config = ConfigParser.RawConfigParser()
         self.config.read(config_file)
@@ -45,9 +45,8 @@ class Config:
 
         self.email = dict(self.config.items('email'))
 
-        self.network = {'name': network,
-                        'username': self.config.get(network, 'username'),
-                        'password': self.config.get(network, 'password')}
+        self.network = ''
+
 
     def get_url(self):
         """Return url config"""
@@ -71,3 +70,9 @@ class Config:
             node_name = 'default_gateway'
 
         return dict(self.config.items(node_name))
+
+    def set_network(self, network):
+        self.network = {'name': network,
+                        'username': self.config.get(network, 'username'),
+                        'password': self.config.get(network, 'password')}
+
