@@ -169,4 +169,4 @@ class Postgres:
 
                 self.conn.commit()
             else:
-                logging.info('Table "users" already exists')
+                logging.info('Table "%s" already exists', table)
