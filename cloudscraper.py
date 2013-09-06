@@ -66,6 +66,7 @@ if args.network:
     if not (args.database or args.email or args.screen):
         parser.error('No output defined')
 
+    config.set_network(args.network[0])
 
     cloudtrax = CloudTrax(config)
     nodes = cloudtrax.get_nodes()
