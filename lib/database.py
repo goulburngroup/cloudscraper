@@ -32,6 +32,15 @@ class Database:
         """Add a node in the database"""
         return self.backend.add_records(nodes, users)
 
+    def get_past_stats(self, interval):
+        """Retrieve past statistics from the database
+        
+        This method retrieves the following by day,
+        - Unique users
+        - Total downloads in kb
+        - Total uploads in kb"""
+        return self.backend.get_past_stats(interval)
+
 
 class Postgres:
     """Postgres database class"""
@@ -119,6 +128,22 @@ class Postgres:
                                                      users[user].get_values())
 
         self.conn.commit()
+
+
+    def get_past_stats(self, interval):
+        """Postgres implementation of this method"""
+        self.cursor.execute("""SELECT date(timestamp) as date,
+                                      count(distinct(mac)) as users,
+                                      sum(kbdown) as kbdown,
+                                      sum(kbup) as kbup
+                                 FROM users
+                                WHERE timestamp > now() - INTERVAL %s AND
+                                      timestamp < now()
+                             GROUP BY date
+                             ORDER BY date desc""", (interval, ))
+
+        return self.cursor
+
 
     def table_exists(self, table):
         """Check if a particular table exists in the database"""

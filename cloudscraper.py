@@ -40,6 +40,9 @@ parser.add_argument('-e', '--email',
 parser.add_argument('-n', '--network',
                     nargs = 1, 
                     help = 'The wifi network name on CloudTrax')
+parser.add_argument('-r', '--report',
+                    nargs = 1, 
+                    help = 'Product a report from database statistics [day|month|year]')
 parser.add_argument('-s', '--screen',
                     action = 'store_true',
                     default = False, 
@@ -57,6 +60,10 @@ if args.verbose:
 else:
     logging.basicConfig(level=logging.WARNING,
                         format='%(asctime)s - %(levelname)s - %(message)s')
+
+if args.network and args.report:
+    #TODO: We might be able to do this later...
+    parser.error('You cannot scrape data and report history at the same time')
 
 # Parse configuration file
 config = Config(CONFIG_FILE)
@@ -162,7 +169,20 @@ if args.network:
         mailer.sendmail(email_from, email_to.split(), email.as_string())
         mailer.quit()
 
+elif args.report:
+    logging.info('Producing report - %s' % args.report[0])
 
+    database = Database(config.get_db())
+
+    if args.report[0] == 'year':
+        interval = '1 year'
+    elif args.report[0] == 'month':
+        interval = '1 month'
+    else:
+        interval = '1 day'
+
+    for record in database.get_past_stats(interval):
+        print record
 else:
-    parser.error('You must provide a network')
+    parser.error('You must provide a network to scrape or a report to produce')
 
