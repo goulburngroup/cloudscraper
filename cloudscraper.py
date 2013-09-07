@@ -21,6 +21,7 @@ from lib.mail import Email
 import argparse
 import datetime
 import logging
+import pygal
 
 CONFIG_FILE = '/opt/cloudscraper/cloudscraper.conf'
 
@@ -141,15 +142,38 @@ elif args.report:
     else:
         interval = '1 day'
 
-    msg = "<pre>"
+    msg = "<h2>Users by day</h2>"
+
+    for count in range(1):
+        msg += "<img src=\"cid:image%s\">" % (count + 1)
+
+    msg += "<pre>"
+
+    days = []
+    users = []
+    dlkb = []
+    ulkb = []
+
     for record in database.get_past_stats(interval):
         msg += "%s - %s users - %s kb downloaded - %s kb uploaded\n" % record
+        days.append("%s/%s" % (record[0].day, record[0].month))
+        users.append(record[1])
+        dlkb.append(record[2])
+        ulkb.append(record[3])
 
     msg += "</pre>"
 
     if args.email:
         email = Email(config.get_email())
         email.attach_html(msg)
+
+        # Create usage graph
+        line_chart = pygal.Line()
+        line_chart.title = 'Users by day'
+        line_chart.x_labels = map(str, days)
+        line_chart.add('Users', users)
+
+        email.attach_image(line_chart.render_to_png())
         email.send()
 else:
     parser.error('You must provide a network to scrape or a report to produce')
