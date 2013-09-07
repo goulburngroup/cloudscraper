@@ -140,7 +140,7 @@ class Postgres:
                                 WHERE timestamp > now() - INTERVAL %s AND
                                       timestamp < now()
                              GROUP BY date
-                             ORDER BY date desc""", (interval, ))
+                             ORDER BY date""", (interval, ))
 
         return self.cursor
 
