@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" lib/email.py
+""" lib/mail.py
 
  Email class for CloudScraper
 
