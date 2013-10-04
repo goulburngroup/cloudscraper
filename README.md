@@ -25,6 +25,7 @@ You should already have Python installed, but you will need to install some modu
 
     # apt-get install python-beautifulsoup python-configobj python-imaging
     # apt-get install python-mailer python-pip python-requests 
+    # apt-get install libxml2-dev libxslt-dev python-dev
     # pip install texttable pygal cairosvg tinycss cssselect
 
 PostgreSQL
