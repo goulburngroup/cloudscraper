@@ -188,7 +188,7 @@ class CloudTrax:
     def collect_nodes(self):
         """Return network information scraped from CloudTrax"""
 
-        parameters = {'network': self.network['name'],
+        parameters = {'id': self.network['name'],
                       'showall': '1',
                       'details': '1'}
     
