@@ -69,9 +69,14 @@ class Node:
                        'memfree': values[8][1],
                        'last_checkin': values[9][-1],
                        'gateway_name': values[10][0],
-                       'gateway_ip': values[10][1],
                        'hops': values[11][0],
                        'latency': values[12][0]}
+
+        # Orphaned nodes have no IP
+        try:
+            self.values['gateway_ip'] = values[10][1]
+        except IndexError:
+            self.values['gateway_ip'] = ""
 
         self.checkin_data = checkin_data
 
