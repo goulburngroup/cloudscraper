@@ -113,8 +113,8 @@ class CloudTrax:
 
         logging.info('Logging in to CloudTrax Dashboard')
 
-        parameters = {'account': self.network['username'],
-                      'password': self.network['password'],
+        parameters = {'login': self.network['username'],
+                      'login-pw': self.network['password'],
                       'status': 'View Status'}
 
         try:
