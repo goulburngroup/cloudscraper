@@ -61,16 +61,41 @@ class Node:
                        'ul': 0,
                        'gw_dl': 0,
                        'gw_ul': 0,
-                       'uptime': values[6][0],
                        'uptime_percent': checkin_data[3],
-                       'fw_version': values[7][0],
-                       'fw_name': values[7][1],
-                       'load': values[8][0],
-                       'memfree': values[8][1],
                        'last_checkin': values[9][-1],
                        'gateway_name': values[10][0],
                        'hops': values[11][0],
                        'latency': values[12][0]}
+
+        # New nodes have no uptime
+        try:
+            self.values['uptime'] = values[6][0]
+        except IndexError:
+            self.values['uptime'] = "Unknown"
+
+        # New nodes have no fw_version
+        try:
+            self.values['fw_version'] = values[7][0]
+        except IndexError:
+            self.values['fw_version'] = "Unknown"
+
+        # New nodes have no fw_name
+        try:
+            self.values['fw_name'] = values[7][1]
+        except IndexError:
+            self.values['fw_name'] = "Unknown"
+
+        # New nodes have no load
+        try:
+            self.values['load'] = values[8][0]
+        except IndexError:
+            self.values['load'] = "Unknown"
+
+        # New nodes have no memfree
+        try:
+            self.values['memfree'] = values[8][1]
+        except IndexError:
+            self.values['memfree'] = "Unknown"
 
         # Orphaned nodes have no IP
         try:
