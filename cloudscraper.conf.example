@@ -1,5 +1,6 @@
 [common]
 cloudtrax_url = https://cloudtrax.com/
+overview_page = overview2.php
 login_page = dashboard.php
 node_checkin_page = checkin-graph2.php
 data_page = nodes_attnt2.php
@@ -21,9 +22,11 @@ title = Email Report Title
 ;username = set_your_username
 ;password = set_your_password
 
-[set_your_network]
+[network]
+name = set_your_network_name
 username = set_your_username
 password = set_your_password
+recurse = no
 
 [default_gateway]
 quota = 5000000
