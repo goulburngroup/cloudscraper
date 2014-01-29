@@ -65,16 +65,20 @@ def distill_html(content, element, identifier):
 
     if element == 'table':
 
-        for row in trimed_content.findAll('tr'):
-            raw_values = []
+        try:
+            for row in trimed_content.findAll('tr'):
+                raw_values = []
 
-            for cell in row.findAll('td'):
-                raw_values.append(cell.findAll(text=True))
+                for cell in row.findAll('td'):
+                    raw_values.append(cell.findAll(text=True))
 
-            # Watch out for blank rows
-            if len(raw_values) > 0:
-                # Create a new node object for each node in the network
-                distilled_text.append(raw_values)
+                # Watch out for blank rows
+                if len(raw_values) > 0:
+                    # Create a new node object for each node in the network
+                    distilled_text.append(raw_values)
+
+        except AttributeError:
+            pass
 
     if element == 'select':
 
