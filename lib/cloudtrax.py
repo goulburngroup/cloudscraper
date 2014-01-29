@@ -277,8 +277,12 @@ class CloudTrax:
                     user = User(raw_values)
                     usage_dl = user.get_dl()
                     usage_ul = user.get_ul()
+                    user_mac = user.get_mac()
 
-                    self.users[user.get_mac()] = user
+                    if user_mac in self.users.keys():
+                        self.users[user_mac].add_usage(usage_dl, usage_ul)
+                    else:
+                        self.users[user_mac] = user
 
                     gateway = self.nodes[user.get_node_name()].add_usage(usage_dl, 
                                                                          usage_ul)
