@@ -61,11 +61,13 @@ def distill_html(content, element, identifier):
     """Accept some HTML and return the filtered output"""
     distilled_text = []
 
-    if element == 'table':
-        distilled_table = BeautifulSoup(content).find(element, identifier)
+    trimed_content = BeautifulSoup(content).find(element, identifier)
 
-        for row in distilled_table.findAll('tr'):
-            raw_values = []
+    if element == 'table':
+
+        raw_values = []
+
+        for row in trimed_content.findAll('tr'):
 
             for cell in row.findAll('td'):
                 raw_values.append(cell.findAll(text=True))
@@ -74,6 +76,16 @@ def distill_html(content, element, identifier):
             if len(raw_values) > 0:
                 # Create a new node object for each node in the network
                 distilled_text.append(raw_values)
+
+    if element == 'select':
+
+        try:
+            for row in trimed_content.findAll('option', text=True):
+                if len(row) > 0:
+                    distilled_text.append(row)
+
+        except AttributeError:
+            pass
 
     return distilled_text
 
