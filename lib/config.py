@@ -76,7 +76,7 @@ class Config:
         return dict(self.config.items(node_name))
 
     def set_network(self, network):
-        self.network = {'name': network,
-                        'username': self.config.get(network, 'username'),
-                        'password': self.config.get(network, 'password')}
+        """Set a single network"""
+        self.network['name'] = network
+        self.network['recurse'] = False
 
