@@ -122,6 +122,8 @@ class CloudTrax:
         self.collect_nodes()
         self.collect_users()
 
+        self.monitor_usage()
+
 
     def login(self):
         """Method to login and create a web session"""
@@ -241,16 +243,6 @@ class CloudTrax:
 
                     self.nodes[node.get_name()] = node
 
-                    if node.get_type() == 'gateway':
-                        # ok, so here we need to work out what the quota
-                        # is from the config file
-                        # TODO: Check quotas for over-use and send email
-                        node_name = node.get_name()
-                        node_settings = self.config.get_node_settings(node_name)
-                        quota = node_settings['quota']
-                        email = node_settings['email']
-                        print "GATEWAY", node_name, quota, email
-
             else:
                 logging.error('Request failed') 
                 exit(request.status_code)
@@ -341,6 +333,23 @@ class CloudTrax:
                                     self.users[user].get_ul())])
 
         return graph_object
+
+    def monitor_usage(self):
+        """Make sure that the gateway nodes have not exceeded their quota"""
+
+        for node in self.nodes:
+            if self.nodes[node].get_type() == 'gateway':
+                # ok, so here we need to work out what the quota
+                # is from the config file
+                # TODO: Check quotas for over-use and send email
+                node_name = self.nodes[node].get_name()
+                node_settings = self.config.get_node_settings(node_name)
+                quota = node_settings['quota']
+                email = node_settings['email']
+                print "GATEWAY", node_name, quota, email
+
+        return None
+
 
     def report_summary(self):
         """Return a string containing a pretty summary report"""
