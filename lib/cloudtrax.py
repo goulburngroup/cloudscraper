@@ -218,28 +218,41 @@ class CloudTrax:
     def collect_nodes(self):
         """Return network information scraped from CloudTrax"""
 
-        parameters = {'id': self.network['name'],
-                      'showall': '1',
-                      'details': '1'}
+        print self.network['networks']
+
+        for network in self.network['networks']:
+            parameters = {'id': network,
+                          'showall': '1',
+                          'details': '1'}
     
-        logging.info('Requesting network status') 
+            logging.info('Requesting network status') 
 
-        request = self.session.get(self.url['data'], params=parameters)
+            request = self.session.get(self.url['data'], params=parameters)
 
-        logging.info('Received network status ok') 
+            logging.info('Received network status ok') 
 
-        if request.status_code == 200:
-            for raw_values in distill_html(request.content, 'table',
-                                           {'id': 'mytable'}):
+            if request.status_code == 200:
+                for raw_values in distill_html(request.content, 'table',
+                                               {'id': 'mytable'}):
 
-                node = Node(raw_values,
-                            self.get_checkin_data(raw_values[2][0]))
+                    node = Node(raw_values,
+                                self.get_checkin_data(raw_values[2][0]))
 
-                self.nodes[node.get_name()] = node
+                    self.nodes[node.get_name()] = node
 
-        else:
-            logging.error('Request failed') 
-            exit(request.status_code)
+                    if node.get_type() == 'gateway':
+                        # ok, so here we need to work out what the quota
+                        # is from the config file
+                        # TODO: Check quotas for over-use and send email
+                        node_name = node.get_name()
+                        node_settings = self.config.get_node_settings(node_name)
+                        quota = node_settings['quota']
+                        email = node_settings['email']
+                        print "GATEWAY", node_name, quota, email
+
+            else:
+                logging.error('Request failed') 
+                exit(request.status_code)
 
         return self.nodes
 
