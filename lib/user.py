@@ -38,6 +38,12 @@ class User:
 
         logging.info('Creating user object for ' + self.values['mac'])
 
+    def add_usage(self, dl, ul):
+        """Add client usage data to node"""
+        self.values['dl'] += dl
+        self.values['ul'] += ul
+        self.values['nodes'] += 1
+
     def get_values(self):
         """Returns a bunch of values"""
         return self.values
