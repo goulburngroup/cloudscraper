@@ -27,6 +27,10 @@ CONFIG_FILE = '/opt/cloudscraper/cloudscraper.conf'
 
 parser = argparse.ArgumentParser(description = 'Statistics scraper for the ' +
                                                'CloudTrax controller')
+parser.add_argument('-c', '--scrape',
+                    action = 'store_true',
+                    default = False, 
+                    help = 'Scrape (collect) data from CloudTrax')
 parser.add_argument('-d', '--database',
                     action = 'store_true',
                     default = False, 
@@ -37,7 +41,7 @@ parser.add_argument('-e', '--email',
                     help = 'Email the output')
 parser.add_argument('-n', '--network',
                     nargs = 1, 
-                    help = 'The wifi network name on CloudTrax')
+                    help = 'Force one network with no recursion')
 parser.add_argument('-r', '--report',
                     nargs = 1, 
                     help = 'Product a report from database statistics [day|month|year]')
@@ -59,7 +63,7 @@ else:
     logging.basicConfig(level=logging.WARNING,
                         format='%(asctime)s - %(levelname)s - %(message)s')
 
-if args.network and args.report:
+if args.scrape and args.report:
     #TODO: We might be able to do this later...
     parser.error('You cannot scrape data and report history at the same time')
 
@@ -67,11 +71,12 @@ if args.network and args.report:
 config = Config(CONFIG_FILE)
 
 if args.network:
+    config.set_network(args.network[0])
+
+if args.scrape:
     # We need to know to output the result
     if not (args.database or args.email or args.screen):
         parser.error('No output defined')
-
-    config.set_network(args.network[0])
 
     cloudtrax = CloudTrax(config)
     nodes = cloudtrax.get_nodes()
@@ -176,5 +181,5 @@ elif args.report:
         email.attach_image(line_chart.render_to_png())
         email.send()
 else:
-    parser.error('You must provide a network to scrape or a report to produce')
+    parser.error('You must either scrape data or produce a report')
 
