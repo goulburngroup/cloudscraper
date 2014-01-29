@@ -44,7 +44,7 @@ parser.add_argument('-n', '--network',
                     help = 'Force one network with no recursion')
 parser.add_argument('-r', '--report',
                     nargs = 1, 
-                    help = 'Product a report from database statistics [day|month|year]')
+                    help = 'Produce a report from database statistics [day|month|year]')
 parser.add_argument('-s', '--screen',
                     action = 'store_true',
                     default = False, 
