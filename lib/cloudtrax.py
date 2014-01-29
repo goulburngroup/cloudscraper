@@ -140,6 +140,20 @@ class CloudTrax:
             logging.error('There was a connection error')
             exit(1)
 
+        # If the login referes to a master network with recursion,
+        # we need to iterate through them to get our stats
+        if self.network['recurse']:
+            networks = distill_html(request.content, 
+                                    'select',
+                                    {'name': 'networks'})
+
+            for network in networks:
+
+                network = str(network).split(' ', 1)[0]
+
+                if network not in self.network['networks']:
+                    self.network['networks'].append(network)
+
         return self.session
 
     def get_checkin_data(self, node_mac):
@@ -184,6 +198,10 @@ class CloudTrax:
     def get_session(self):
         """Return session id"""
         return self.session
+
+    def get_sub_networks(self):
+        """Return a list of networks associated with this login"""
+        return self.sub_networks
 
     def get_nodes(self):
         """Return a list of node objects"""
