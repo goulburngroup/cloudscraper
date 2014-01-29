@@ -20,15 +20,21 @@ class User:
         """Constructor"""
         self.values = {'name': values[0][0],
                        'mac': values[0][-1],
-                       'node_name': values[1][0],
-                       'node_mac': values[1][1],
+                       'node_mac': values[1][-1],
                        #'device_vendor': values[2],
                        'rssi': values[3][0],
                        'rate': values[4][0],
                        'MCS': values[4][1],
                        'dl': int(values[5][0].replace(',', '')),
                        'ul': int(values[6][0].replace(',', '')),
-                       'blocked': values[8][0]}
+                       'blocked': values[8][0],
+                       'nodes': 1}
+
+        # Node names are optional
+        if len(values[1]) == 2:
+            self.values['node_name'] = values[1][0]
+        else:
+            self.values['node_name'] = ""
 
         logging.info('Creating user object for ' + self.values['mac'])
 

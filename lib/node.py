@@ -50,8 +50,6 @@ class Node:
             self.node_status = 'down'
 
         self.values = {'status': values[0][0],
-                       'name': values[1][0],
-                       'comment': values[1][-1],
                        'mac': values[2][0],
                        'ip': values[2][1],
                        'chan_24': values[3][0],
@@ -66,6 +64,17 @@ class Node:
                        'gateway_name': values[10][0],
                        'hops': values[11][0],
                        'latency': values[12][0]}
+
+        # Optional entries.
+        try:
+            self.values['name'] = values[1][0]
+        except IndexError:
+            self.values['name'] = "Unknown"
+
+        try:
+            self.values['comment'] = values[1][1]
+        except IndexError:
+            self.values['comment'] = ""
 
         # New nodes have no uptime
         try:
