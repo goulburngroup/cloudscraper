@@ -65,9 +65,8 @@ def distill_html(content, element, identifier):
 
     if element == 'table':
 
-        raw_values = []
-
         for row in trimed_content.findAll('tr'):
+            raw_values = []
 
             for cell in row.findAll('td'):
                 raw_values.append(cell.findAll(text=True))
