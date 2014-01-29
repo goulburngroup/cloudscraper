@@ -261,7 +261,7 @@ class CloudTrax:
         """Return a list of wifi user statistics scraped from CloudTrax"""
 
         for network in self.network['networks']:
-            parameters = {'network': network}
+            parameters = {'id': network}
     
             logging.info('Requesting user statistics') 
 
