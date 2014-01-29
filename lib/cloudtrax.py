@@ -256,37 +256,38 @@ class CloudTrax:
     def collect_users(self):
         """Return a list of wifi user statistics scraped from CloudTrax"""
 
-        parameters = {'network': self.network['name']}
+        for network in self.network['networks']:
+            parameters = {'network': network}
     
-        logging.info('Requesting user statistics') 
+            logging.info('Requesting user statistics') 
 
-        request = self.session.get(self.url['user'], params=parameters)
+            request = self.session.get(self.url['user'], params=parameters)
 
-        logging.info('Received user statistics ok') 
+            logging.info('Received user statistics ok') 
 
 
-        if request.status_code == 200:
-            for raw_values in distill_html(request.content, 'table',
-                                           {'class': 'inline sortable'}):
+            if request.status_code == 200:
+                for raw_values in distill_html(request.content, 'table',
+                                               {'class': 'inline sortable'}):
 
-                user = User(raw_values)
-                usage_dl = user.get_dl()
-                usage_ul = user.get_ul()
+                    user = User(raw_values)
+                    usage_dl = user.get_dl()
+                    usage_ul = user.get_ul()
 
-                self.users[user.get_mac()] = user
+                    self.users[user.get_mac()] = user
 
-                gateway = self.nodes[user.get_node_name()].add_usage(usage_dl,
-                                                                     usage_ul)
+                    gateway = self.nodes[user.get_node_name()].add_usage(usage_dl, 
+                                                                         usage_ul)
 
-                if gateway != 'self':
-                    self.nodes[gateway].add_gw_usage(usage_dl, usage_ul)
+                    if gateway != 'self':
+                        self.nodes[gateway].add_gw_usage(usage_dl, usage_ul)
 
-                self.usage[0] += usage_dl
-                self.usage[1] += usage_ul
+                    self.usage[0] += usage_dl
+                    self.usage[1] += usage_ul
 
-        else:
-            logging.error('Request failed') 
-            exit(request.status_code)
+            else:
+                logging.error('Request failed') 
+                exit(request.status_code)
 
         return self.users
 
