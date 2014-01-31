@@ -41,7 +41,7 @@ parser.add_argument('-n', '--network',
                     help = 'Force one network with no recursion')
 parser.add_argument('-r', '--report',
                     nargs = 1, 
-                    help = 'Produce a report from database statistics [day|month|year]')
+                    help = 'Produce a report to email from database statistics [day|month|year]')
 parser.add_argument('-s', '--screen',
                     action = 'store_true',
                     default = False, 
@@ -173,18 +173,17 @@ elif args.report:
 
     msg += "</pre>"
 
-    if args.email:
-        email = Email(config.get_email())
-        email.attach_html(msg)
+    email = Email(config.get_email())
+    email.attach_html(msg)
 
-        # Create usage graph
-        line_chart = pygal.Line()
-        line_chart.title = 'Users by day'
-        line_chart.x_labels = map(str, days)
-        line_chart.add('Users', users)
+    # Create usage graph
+    line_chart = pygal.Line()
+    line_chart.title = 'Users by day'
+    line_chart.x_labels = map(str, days)
+    line_chart.add('Users', users)
 
-        email.attach_image(line_chart.render_to_png())
-        email.send()
+    email.attach_image(line_chart.render_to_png())
+    email.send()
 else:
     parser.error('You must either scrape data or produce a report')
 
