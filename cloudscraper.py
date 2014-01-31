@@ -95,9 +95,12 @@ if args.scrape:
     msg += cloudtrax.report_nodes()
     msg += cloudtrax.report_users()
 
+    if args.database or args.report:
+        # Create the database object once
+        database = Database(config.get_db())
+
     if args.database:
         logging.info('Processing database output')
-        database = Database(config.get_db())
 
         database.add_records(nodes, users)
 
@@ -145,8 +148,6 @@ if args.scrape:
 
 elif args.report:
     logging.info('Producing report - %s' % args.report[0])
-
-    database = Database(config.get_db())
 
     if args.report[0] == 'year':
         interval = '1 year'
