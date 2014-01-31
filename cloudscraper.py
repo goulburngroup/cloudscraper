@@ -28,10 +28,6 @@ parser = argparse.ArgumentParser(description = 'Statistics scraper for the ' +
 parser.add_argument('-c', '--config',
                     nargs = 1, 
                     help = 'Specify an alternate configuration file')
-parser.add_argument('-k', '--scrape',
-                    action = 'store_true',
-                    default = False, 
-                    help = 'Scrape (collect) data from CloudTrax')
 parser.add_argument('-d', '--database',
                     action = 'store_true',
                     default = False, 
@@ -71,7 +67,7 @@ else:
     CONFIG_FILE = '/opt/cloudscraper/cloudscraper.conf'
 
 
-if args.scrape and args.report:
+if (args.database or args.email or args.screen) and args.report:
     #TODO: We might be able to do this later...
     parser.error('You cannot scrape data and report history at the same time')
 
@@ -81,7 +77,11 @@ config = Config(CONFIG_FILE)
 if args.network:
     config.set_network(args.network[0])
 
-if args.scrape:
+if args.database or args.report:
+    # Create the database object once
+    database = Database(config.get_db())
+
+if args.database or args.email or args.screen:
     # We need to know to output the result
     if not (args.database or args.email or args.screen):
         parser.error('No output defined')
@@ -94,10 +94,6 @@ if args.scrape:
     msg += cloudtrax.report_summary()
     msg += cloudtrax.report_nodes()
     msg += cloudtrax.report_users()
-
-    if args.database or args.report:
-        # Create the database object once
-        database = Database(config.get_db())
 
     if args.database:
         logging.info('Processing database output')
