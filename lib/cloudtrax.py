@@ -279,7 +279,7 @@ class CloudTrax:
                     gateway = self.nodes[user.get_node_name()].add_usage(usage_dl, 
                                                                          usage_ul)
 
-                    if gateway != 'self':
+                    if gateway != 'self' and gateway != 'not reported':
                         self.nodes[gateway].add_gw_usage(usage_dl, usage_ul)
 
                     self.usage[0] += usage_dl
