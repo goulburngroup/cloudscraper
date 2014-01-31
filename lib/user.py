@@ -36,7 +36,7 @@ class User:
         else:
             self.values['node_name'] = ""
 
-        logging.info('Creating user object for ' + self.values['mac'])
+        logging.info('Creating user object for %s', self.values['mac'])
 
     def add_usage(self, dl, ul):
         """Add client usage data to node"""

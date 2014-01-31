@@ -167,7 +167,7 @@ class CloudTrax:
         parameters = {'mac': node_mac,
                       'legend': '0'}
 
-        logging.info('Requesting node checkin status for ' + node_mac)
+        logging.info('Requesting node checkin status for %s', node_mac)
 
         request = self.session.get(self.url['checkin'], params=parameters)
 
