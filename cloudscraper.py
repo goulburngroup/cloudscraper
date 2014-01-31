@@ -82,10 +82,6 @@ if args.database or args.report:
     database = Database(config.get_db())
 
 if args.database or args.email or args.screen:
-    # We need to know to output the result
-    if not (args.database or args.email or args.screen):
-        parser.error('No output defined')
-
     cloudtrax = CloudTrax(config)
     nodes = cloudtrax.get_nodes()
     users = cloudtrax.get_users()
