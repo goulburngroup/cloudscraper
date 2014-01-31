@@ -23,11 +23,12 @@ import datetime
 import logging
 import pygal
 
-CONFIG_FILE = '/opt/cloudscraper/cloudscraper.conf'
-
 parser = argparse.ArgumentParser(description = 'Statistics scraper for the ' +
                                                'CloudTrax controller')
-parser.add_argument('-c', '--scrape',
+parser.add_argument('-c', '--config',
+                    nargs = 1, 
+                    help = 'Specify an alternate configuration file')
+parser.add_argument('-k', '--scrape',
                     action = 'store_true',
                     default = False, 
                     help = 'Scrape (collect) data from CloudTrax')
@@ -62,6 +63,13 @@ if args.verbose:
 else:
     logging.basicConfig(level=logging.WARNING,
                         format='%(asctime)s - %(levelname)s - %(message)s')
+
+if args.config:
+    CONFIG_FILE = args.config[0]
+    logging.info('Configuration file changed to "%s"', CONFIG_FILE)
+else:
+    CONFIG_FILE = '/opt/cloudscraper/cloudscraper.conf'
+
 
 if args.scrape and args.report:
     #TODO: We might be able to do this later...
