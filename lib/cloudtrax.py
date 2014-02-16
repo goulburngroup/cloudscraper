@@ -279,7 +279,7 @@ class CloudTrax:
                     if user.get_node_name():
                         gateway = self.nodes[user.get_node_name()].add_usage(usage_dl, 
                                                                              usage_ul)
-                    else
+                    else:
                         #TODO: Gateway is unknown. User has moved to another network?
                         logging.error('User gateway is unknown.')
 
