@@ -188,22 +188,21 @@ else:
     parser.error('You must either scrape data or produce a report')
 
 if args.monitor:
-    print "Time to monitor"
+    nodes = cloudtrax.get_nodes()
 
-    for node in cloudtrax.get_nodes():
-        print node
-        type(node)
-       #for node in self.nodes:
-            #if self.nodes[node].get_type() == 'gateway':
-                # ok, so here we need to work out what the quota
-                # is from the config file
-                # TODO: Check quotas for over-use and send email
-                #node_name = self.nodes[node].get_name()
-                #node_settings = self.config.get_node_settings(node_name)
-                #quota = node_settings['quota']
-                #email = node_settings['email']
-                #print "GATEWAY", node_name, quota, email
+    interval='%s day' % str(datetime.date.today().day)
 
-    interval='%s day' % str(datetime.datetime.today().day)
     for record in database.get_past_gw_xfer(interval):
-        print record
+        node_mac = record[0]
+        dl = record[1]
+        ul = record[2]
+
+        if dl > 0 and ul > 0:
+            node_name = nodes[node_mac].get_name()
+            node_settings = config.get_node_settings(node_name)
+            quota = node_settings['quota']
+            email = node_settings['email']
+
+            print node_mac, dl, ul, node_name, email
+            print quota
+

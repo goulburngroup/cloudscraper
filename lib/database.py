@@ -140,14 +140,14 @@ class Postgres:
 
     def get_past_gw_xfer(self, interval):
         """Postgres implementation of this method"""
-        self.cursor.execute("""SELECT name,
+        self.cursor.execute("""SELECT mac,
                                       sum(gwkbdown) as kbdown,
                                       sum(gwkbup) as kbup
                                  FROM nodes
                                 WHERE timestamp > now() - INTERVAL %s AND
                                       timestamp < now()
-                             GROUP BY name
-                             ORDER BY name""", (interval, ))
+                             GROUP BY mac
+                             ORDER BY mac""", (interval, ))
 
         return self.cursor
 
