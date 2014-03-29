@@ -50,7 +50,7 @@ class Node:
             self.node_status = 'down'
 
         self.values = {'status': values[0][0],
-                       'mac': values[2][0],
+                       'mac': values[2][0].lower(),
                        'ip': values[2][1],
                        'chan_24': values[3][0],
                        'chan_58': values[3][1],

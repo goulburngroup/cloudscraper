@@ -241,7 +241,7 @@ class CloudTrax:
                     node = Node(raw_values,
                                 self.get_checkin_data(raw_values[2][0]))
 
-                    self.nodes[node.get_name()] = node
+                    self.nodes[node.get_mac()] = node
 
             else:
                 logging.error('Request failed') 
@@ -270,21 +270,18 @@ class CloudTrax:
                     usage_dl = user.get_dl()
                     usage_ul = user.get_ul()
                     user_mac = user.get_mac()
+                    node_mac = user.get_node_mac()
 
                     if user_mac in self.users.keys():
                         self.users[user_mac].add_usage(usage_dl, usage_ul)
                     else:
                         self.users[user_mac] = user
 
-                    if user.get_node_name():
-                        gateway = self.nodes[user.get_node_name()].add_usage(usage_dl, 
-                                                                             usage_ul)
-                    else:
-                        #TODO: Gateway is unknown. User has moved to another network?
-                        logging.error('User gateway is unknown.')
+                    gateway = self.nodes[node_mac].add_usage(usage_dl, 
+                                                             usage_ul)
 
                     if gateway != 'self' and gateway != 'not reported':
-                        self.nodes[gateway].add_gw_usage(usage_dl, usage_ul)
+                        self.nodes[node_mac].add_gw_usage(usage_dl, usage_ul)
 
                     self.usage[0] += usage_dl
                     self.usage[1] += usage_ul

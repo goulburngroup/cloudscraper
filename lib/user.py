@@ -13,14 +13,34 @@
 
 import logging
 
+def mac2dec(mac):
+    """Converts a mac address to a decimal integer"""
+
+    return int(mac.replace(':', ''), 16)
+
+
+def dec2mac(decimal_mac):
+    """Converts a mac address represented as an decimal integer, to a string"""
+
+    mac = str('%x' % decimal_mac).zfill(12)
+
+    return ':'.join(s.encode('hex').lower() for s in mac.decode('hex'))
+
+
+def decrement_mac(mac):
+    """Calculate the actual node mac from the wifi mac address"""
+
+    return dec2mac(mac2dec(mac) - 7)
+
+
 class User:
     """Wifi user class"""
 
     def __init__(self, values):
         """Constructor"""
         self.values = {'name': values[0][0],
-                       'mac': values[0][-1],
-                       'node_mac': values[1][-1],
+                       'mac': values[0][-1].lower(),
+                       'node_mac': decrement_mac(values[1][-1]).lower(),
                        #'device_vendor': values[2],
                        'rssi': values[3][0],
                        'rate': values[4][0],
