@@ -32,6 +32,14 @@ class Database:
         """Add a node in the database"""
         return self.backend.add_records(nodes, users)
 
+    def get_past_gw_xfer(self, interval):
+        """Retrieve past statistics from the database
+        
+        This method retrieves the following by gateway,
+        - Total downloads in kb
+        - Total uploads in kb"""
+        return self.backend.get_past_gw_xfer(interval)
+
     def get_past_stats(self, interval):
         """Retrieve past statistics from the database
         
@@ -128,6 +136,20 @@ class Postgres:
                                                      users[user].get_values())
 
         self.conn.commit()
+
+
+    def get_past_gw_xfer(self, interval):
+        """Postgres implementation of this method"""
+        self.cursor.execute("""SELECT name,
+                                      sum(gwkbdown) as kbdown,
+                                      sum(gwkbup) as kbup
+                                 FROM nodes
+                                WHERE timestamp > now() - INTERVAL %s AND
+                                      timestamp < now()
+                             GROUP BY name
+                             ORDER BY name""", (interval, ))
+
+        return self.cursor
 
 
     def get_past_stats(self, interval):

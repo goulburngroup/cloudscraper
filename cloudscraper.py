@@ -36,6 +36,10 @@ parser.add_argument('-e', '--email',
                     action = 'store_true',
                     default = False, 
                     help = 'Email the output')
+parser.add_argument('-m', '--monitor',
+                    action = 'store_true',
+                    default = False, 
+                    help = 'Monitor quota for gateway nodes')
 parser.add_argument('-n', '--network',
                     nargs = 1, 
                     help = 'Force one network with no recursion')
@@ -77,7 +81,7 @@ config = Config(CONFIG_FILE)
 if args.network:
     config.set_network(args.network[0])
 
-if args.database or args.report:
+if args.database or args.monitor or args.report:
     # Create the database object once
     database = Database(config.get_db())
 
@@ -183,3 +187,23 @@ elif args.report:
 else:
     parser.error('You must either scrape data or produce a report')
 
+if args.monitor:
+    print "Time to monitor"
+
+    for node in cloudtrax.get_nodes():
+        print node
+        type(node)
+       #for node in self.nodes:
+            #if self.nodes[node].get_type() == 'gateway':
+                # ok, so here we need to work out what the quota
+                # is from the config file
+                # TODO: Check quotas for over-use and send email
+                #node_name = self.nodes[node].get_name()
+                #node_settings = self.config.get_node_settings(node_name)
+                #quota = node_settings['quota']
+                #email = node_settings['email']
+                #print "GATEWAY", node_name, quota, email
+
+    interval='%s day' % str(datetime.datetime.today().day)
+    for record in database.get_past_gw_xfer(interval):
+        print record
