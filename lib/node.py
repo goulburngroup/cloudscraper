@@ -210,6 +210,10 @@ class Node:
         """Return the data transfer for this node"""
         return (self.values['dl'], self.values['ul'])
 
+    def is_alerting(self):
+        """Return True if node is altering"""
+        return not self.is_spare() and self.checkin_data[2] > 0
+
     def is_gateway(self):
         """Return True if node is a gateway node"""
         return self.node_type == 'gateway'

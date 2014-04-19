@@ -108,6 +108,7 @@ class CloudTrax:
         self.nodes = dict()
         self.users = dict()
         self.usage = [0, 0]
+        self.alerting = []
 
         self.session = requests.session()
 
@@ -158,6 +159,10 @@ class CloudTrax:
                     self.network['networks'].append(network)
 
         return self.session
+
+    def get_alerting(self):
+        """Return a list of alerting nodes"""
+        return self.alerting
 
     def get_checkin_data(self, node_mac):
         """Scrape checkin information on the current node"""
@@ -239,6 +244,10 @@ class CloudTrax:
                     node = Node(raw_values,
                                 self.get_checkin_data(raw_values[2][0]),
                                 network)
+
+                    if node.is_alerting():
+                        logging.info('%s is alerting' % (node))
+                        self.alerting.append(node)
 
                     self.nodes[node.get_mac()] = node
 
@@ -338,6 +347,9 @@ class CloudTrax:
         """Return a string containing a pretty summary report"""
         report = 'Summary statistics for the last 24 hours\n'
         report += '----------------------------------------\n\n'
+        if len(self.alerting) > 0:
+            report += "*** Warning - %s nodes are alerting ***\n\n" % (len(self.alerting))
+
         report += "Total users: %d\n" % len(self.users)
 
         report += "Total downloads (MB): %.2f\n" % (float(self.usage[0]) / 1000)

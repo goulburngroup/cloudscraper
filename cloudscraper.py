@@ -120,6 +120,12 @@ if args.database or args.email or args.screen:
         html_part = "<h2>%s</h2>\n" % config.get_email()['title']
         html_part += "<h3>%s</h3>\n" % today.strftime('%A, %d %B %Y')
         html_part += '<br>\n'
+
+        alerting_nodes = len(cloudtrax.get_alerting())
+
+        if alerting_nodes > 0:
+            html_part += "<b>Warning - %s nodes alerting</b><br><br>\n" % (alerting_nodes)
+
         html_part += "<b>Total users:</b> %s<br>\n" % len(users)
         html_part += '<br>\n'
         html_part += "<b>Total downloads:</b> %s <i>KB</i><br>\n" % '{:,}'.format(usage[0])
