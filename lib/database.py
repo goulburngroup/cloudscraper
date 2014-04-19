@@ -68,6 +68,7 @@ class Postgres:
                                  timestamp timestamp NOT NULL default now(), \
                                  status    smallint NOT NULL, \
                                  name      varchar(40), \
+                                 network   varchar(40), \
                                  gateway   varchar(40), \
                                  mac       macaddr NOT NULL, \
                                  users     smallint NOT NULL, \
@@ -98,6 +99,7 @@ class Postgres:
         for node in nodes:
             self.cursor.execute("""INSERT INTO nodes(status,
                                                      name,
+                                                     network,
                                                      gateway,
                                                      mac,
                                                      users,
@@ -109,6 +111,7 @@ class Postgres:
                                                      firmware)
                                              VALUES (%(status)s,
                                                      %(name)s,
+                                                     %(network)s,
                                                      %(gateway_name)s,
                                                      %(mac)s,
                                                      %(users)s,

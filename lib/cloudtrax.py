@@ -237,7 +237,8 @@ class CloudTrax:
                                                {'id': 'mytable'}):
 
                     node = Node(raw_values,
-                                self.get_checkin_data(raw_values[2][0]))
+                                self.get_checkin_data(raw_values[2][0]),
+                                network)
 
                     self.nodes[node.get_mac()] = node
 
@@ -316,9 +317,9 @@ class CloudTrax:
         for node in self.nodes:
             if gw_only:
                 if self.nodes[node].is_gateway():
-                    graph_object.add(node, self.nodes[node].get_gw_usage())
+                    graph_object.add(self.nodes[node].get_name(), self.nodes[node].get_gw_usage())
             else:
-                graph_object.add(node, self.nodes[node].get_usage())
+                graph_object.add(self.nodes[node].get_name(), self.nodes[node].get_usage())
 
         return graph_object
 

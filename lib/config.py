@@ -71,7 +71,7 @@ class Config:
     def get_node_settings(self, node_name):
         """Return network quota config"""
         if not self.config.has_section(node_name):
-            node_name = 'default_gateway'
+            node_name = 'net_default'
 
         return dict(self.config.items(node_name))
 

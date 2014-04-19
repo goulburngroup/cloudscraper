@@ -188,8 +188,6 @@ else:
     parser.error('You must either scrape data or produce a report')
 
 if args.monitor:
-    nodes = cloudtrax.get_nodes()
-
     interval='%s day' % str(datetime.date.today().day)
 
     for record in database.get_past_gw_xfer(interval):

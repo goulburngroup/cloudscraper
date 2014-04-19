@@ -22,7 +22,7 @@ NODE_STATUS = {'gw_down': '1',
 
 class Node:
     """CloudTrax node class"""
-    def __init__(self, values, checkin_data):
+    def __init__(self, values, checkin_data, network):
         """Constructor"""
         if values[0][0] == NODE_STATUS['gw_up']:
             self.node_type = 'gateway'
@@ -51,6 +51,7 @@ class Node:
 
         self.values = {'status': values[0][0],
                        'mac': values[2][0].lower(),
+                       'network': network,
                        'ip': values[2][1],
                        'chan_24': values[3][0],
                        'chan_58': values[3][1],
