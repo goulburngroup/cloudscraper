@@ -115,6 +115,21 @@ class Node:
 
         self.checkin_data = checkin_data
 
+    def __repr__(self):
+        """Object representation"""
+        return '{}: {} {}'.format(self.__class__.__name__,
+                                  self.values['name'],
+                                  self.values['mac'])
+
+    def __cmp__(self, other):
+        """Object comparison"""
+        if self.values['name'] < other.values['name']:
+            return -1
+        elif self.values['name'] > other.values['name']:
+            return 1
+        else:
+            return 0
+
     def add_gw_usage(self, dl, ul):
         """Add internet usage to node"""
         self.values['gw_dl'] += dl
