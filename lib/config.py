@@ -21,17 +21,6 @@ class Config:
         self.config = ConfigParser.RawConfigParser()
         self.config.read(config_file)
 
-        self.url = {'base': self.config.get('common', 'cloudtrax_url')}
-
-        self.url = {'login': self.url['base'] +
-                             self.config.get('common', 'login_page'),
-                     'data': self.url['base'] +
-                             self.config.get('common', 'data_page'),
-                     'user': self.url['base'] +
-                             self.config.get('common', 'user_page'),
-                     'checkin': self.url['base'] +
-                             self.config.get('common', 'node_checkin_page')}
-
         self.database = {'type': self.config.get('database', 'type')}
 
         if self.database['type'] != "none":
@@ -52,9 +41,8 @@ class Config:
                         'networks': [self.config.get('network', 'name')]}
 
 
-    def get_url(self):
-        """Return url config"""
-        return self.url
+    def get(self, section, key):
+        return self.config.get(section, key)
 
     def get_db(self):
         """Return database config"""

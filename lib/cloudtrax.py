@@ -12,14 +12,23 @@
 """
 
 from BeautifulSoup import BeautifulSoup
+from random import choice
 from lib.node import Node
 from lib.user import User
 import cStringIO
+import hashlib
+import hmac
+import json
 import logging
 import requests
+import string
 import texttable
+import time
 import pygal
 import Image
+
+
+NONCE_CHARS = string.uppercase + string.lowercase + string.digits
 
 
 #
@@ -100,6 +109,11 @@ def percentage(value, max_value):
     return (float(value) * 100) / max_value
 
 
+def make_nonce():
+    """Return a randomly-generated 32-character alphanumeric string."""
+    return ''.join([choice(NONCE_CHARS) for x in range(32)])
+
+
 class CloudTrax:
     """CloudTrax connector class"""
 
@@ -110,19 +124,50 @@ class CloudTrax:
         self.usage = [0, 0]
         self.alerting = []
 
-        self.session = requests.session()
-
         logging.info('Verbose output is turned on')
 
         self.config = config
-        self.url = self.config.get_url()
+        self.url = self.config.get('api', 'url')
+        if self.url.endswith('/'):
+            self.url = self.url[:-1]
+
+        self.key = self.config.get('api', 'key')
+        self.secret = self.config.get('api', 'secret')
+        self.version = self.config.get('api', 'version')
         self.network = self.config.get_network()
 
-        self.login()
+        ###self.login()
+        ###self.collect_nodes()
+        ###self.collect_users()
 
-        self.collect_nodes()
-        self.collect_users()
+    def request(self, path, method='GET', data=None):
+        funcname = method.lower()
+        if not hasattr(requests, funcname):
+            logging.error("Invalid method type {}: No such function in 'requests'.".format(method))
 
+        url = self.url + path
+
+        auth = 'key={},timestamp={},nonce={}'.format(
+                self.key,
+                int(round(time.time())),
+                make_nonce()
+                )
+        sigstr = auth + path
+        jsondata = None
+        if data is not None:
+            jsondata = json.dumps(data)
+            sigstr += jsondata
+        sighmac = hmac.new(self.secret, sigstr, hashlib.sha256)
+        sig = sighmac.hexdigest()
+
+        headers = {
+                'OpenMesh-API-Version': self.version,
+                'Content-Type': 'application/json',
+                'Authorization': auth,
+                'Signature': sig,
+                }
+        func = getattr(requests, funcname)
+        return func(url, headers=headers, data=jsondata)
 
     def login(self):
         """Method to login and create a web session"""
