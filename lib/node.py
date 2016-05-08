@@ -11,124 +11,119 @@
 
 """
 
-NODE_STATUS = {'gw_down': '1',
-               'relay_down': '2',
-               'gw_up': '3',
-               'relay_up': '4',
-               'spare_gw_down': '5',
-               'spare_down': '6',
-               'spare_gw_up': '7',
-               'spare_up': '8'}
 
-class Node:
-    """CloudTrax node class"""
-    def __init__(self, values, checkin_data, network):
-        """Constructor"""
-        if values[0][0] == NODE_STATUS['gw_up']:
-            self.node_type = 'gateway'
-            self.node_status = 'up'
-        elif values[0][0] == NODE_STATUS['gw_down']:
-            self.node_type = 'gateway'
-            self.node_status = 'down'
-        elif values[0][0] == NODE_STATUS['relay_up']:
-            self.node_type = 'relay'
-            self.node_status = 'down'
-        elif values[0][0] == NODE_STATUS['relay_down']:
-            self.node_type = 'relay'
-            self.node_status = 'down'
-        elif values[0][0] == NODE_STATUS['spare_gw_up']:
-            self.node_type = 'spare'
-            self.node_status = 'up'
-        elif values[0][0] == NODE_STATUS['spare_gw_down']:
-            self.node_type = 'spare'
-            self.node_status = 'down'
-        elif values[0][0] == NODE_STATUS['spare_up']:
-            self.node_type = 'spare'
-            self.node_status = 'up'
-        elif values[0][0] == NODE_STATUS['spare_down']:
-            self.node_type = 'spare'
-            self.node_status = 'down'
-
-        self.values = {'status': values[0][0],
-                       'mac': values[2][0].lower(),
-                       'network': network,
-                       'ip': values[2][1],
-                       'chan_24': values[3][0],
-                       'chan_58': values[3][1],
-                       'users': 0,
-                       'dl': 0,
-                       'ul': 0,
-                       'gw_dl': 0,
-                       'gw_ul': 0,
-                       'uptime_percent': checkin_data[3],
-                       'last_checkin': values[9][-1],
-                       'gateway_name': values[10][0],
-                       'hops': values[11][0],
-                       'latency': values[12][0]}
-
-        # Optional entries.
-        try:
-            self.values['name'] = values[1][0]
-        except IndexError:
-            self.values['name'] = "Unknown"
-
-        try:
-            self.values['comment'] = values[1][1]
-        except IndexError:
-            self.values['comment'] = ""
-
-        # New nodes have no uptime
-        try:
-            self.values['uptime'] = values[6][0]
-        except IndexError:
-            self.values['uptime'] = "Unknown"
-
-        # New nodes have no fw_version
-        try:
-            self.values['fw_version'] = values[7][0]
-        except IndexError:
-            self.values['fw_version'] = "Unknown"
-
-        # New nodes have no fw_name
-        try:
-            self.values['fw_name'] = values[7][1]
-        except IndexError:
-            self.values['fw_name'] = "Unknown"
-
-        # New nodes have no load
-        try:
-            self.values['load'] = values[8][0]
-        except IndexError:
-            self.values['load'] = "Unknown"
-
-        # New nodes have no memfree
-        try:
-            self.values['memfree'] = values[8][1]
-        except IndexError:
-            self.values['memfree'] = "Unknown"
-
-        # Orphaned nodes have no IP
-        try:
-            self.values['gateway_ip'] = values[10][1]
-        except IndexError:
-            self.values['gateway_ip'] = ""
-
-        self.checkin_data = checkin_data
-
-    def __repr__(self):
-        """Object representation"""
-        return '{}: {} {}'.format(self.__class__.__name__,
-                                  self.values['name'],
-                                  self.values['mac'])
+class Network(object):
+    def __init__(
+            self,
+            id,
+            name,
+            node_count=None,
+            new_nodes=None,
+            spare_nodes=None,
+            down_gateway=None,
+            down_repeater=None,
+            is_fcc=None,
+            longitude=None,
+            latitude=None,
+            latest_firmware_version=None,
+            ):
+        self.id = id
+        self.name = name
+        self.node_count = node_count
+        self.new_nodes = new_nodes
+        self.spare_nodes = spare_nodes
+        self.down_gateway = down_gateway
+        self.down_repeater = down_repeater
+        self.is_fcc = is_fcc
+        self.location = (latitude, longitude)
+        self.latest_firmware_version = latest_firmware_version
 
     def __cmp__(self, other):
-        """Object comparison"""
-        if self.values['name'] < other.values['name']:
-            return -1
-        elif self.values['name'] > other.values['name']:
-            return 1
-        else:
-            return 0
+        return cmp(self.id, other.id)
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+
+    def __repr__(self):
+        return 'Network {} {}'.format(self.id, self.name)
+
+
+class Node(object):
+    def __init__(
+            self,
+            id,
+            network,
+            name=None,
+            description=None,
+            role=None,
+            spare=None,
+            down=None,
+            mac=None,
+            ip=None,
+            lan_info=None,
+            anonymous_ip=None,
+            selected_gateway=None,
+            gateway_path=None,
+            channels=None,
+            ht_modes=None,
+            hardware=None,
+            flags=None,
+            latitude=None,
+            longitude=None,
+            mesh_version=None,
+            connection_keeper_status=None,
+            custom_sh_approved=None,
+            expedite_upgrade=None,
+            firmware_version=None,
+            neighbors=None,
+            load=None,
+            memfree=None,
+            upgrade_status=None,
+            last_checkin=None,
+            uptime=None,
+            ):
+        self.id = int(id)
+        self.network = network
+        self.name = name
+        self.description = description
+        self.role = role
+        self.spare = spare
+        self.down = down
+        self.mac = mac
+        self.ip = ip
+        self.lan_info = lan_info
+        self.anonymous_ip = anonymous_ip
+        self.selected_gateway = selected_gateway
+        self.gateway_path = gateway_path
+        self.channels = channels
+        self.ht_modes = ht_modes
+        self.hardware = hardware
+        self.flags = flags
+        self.location = (latitude, longitude)
+        self.mesh_version = mesh_version
+        self.connection_keeper_status = connection_keeper_status
+        self.custom_sh_approved = custom_sh_approved
+        self.expedite_upgrade = expedite_upgrade
+        self.firmware_version = firmware_version
+        self.neighbors = neighbors
+        self.load = load
+        self.memfree = memfree
+        self.upgrade_status = upgrade_status
+        self.last_checkin = last_checkin
+        self.uptime = uptime
+
+    def __repr__(self):
+        return 'Node {}/{} {} {}'.format(
+                self.network,
+                self.id,
+                self.mac,
+                self.name)
+
+    def __cmp__(self, other):
+        return cmp(self.name, other.name)
 
     def add_gw_usage(self, dl, ul):
         """Add internet usage to node"""
@@ -230,13 +225,10 @@ class Node:
         return not self.is_spare() and self.checkin_data[2] > 0
 
     def is_gateway(self):
-        """Return True if node is a gateway node"""
-        return self.node_type == 'gateway'
+        return self.role == 'gateway'
 
     def is_relay(self):
-        """Return True if node is a relay node"""
-        return self.node_type == 'relay'
+        return self.role == 'repeater'
 
     def is_spare(self):
-        """Return True if node is a spare node"""
-        return self.node_type == 'spare'
+        return self.spare

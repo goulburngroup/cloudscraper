@@ -20,12 +20,6 @@ title = Email Report Title
 ;username = set_your_username
 ;password = set_your_password
 
-[network]
-name = set_your_network_name
-username = set_your_username
-password = set_your_password
-recurse = no
-
 [default_gateway]
 quota = 5000000
 email = user@yourdomain.com.au

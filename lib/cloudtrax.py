@@ -13,7 +13,7 @@
 
 from BeautifulSoup import BeautifulSoup
 from random import choice
-from lib.node import Node
+from lib.node import Network, Node
 from lib.user import User
 import cStringIO
 import hashlib
@@ -118,13 +118,11 @@ class CloudTrax:
     """CloudTrax connector class"""
 
     def __init__(self, config):
-        """Constructor"""
+        self.networks = dict()
         self.nodes = dict()
         self.users = dict()
         self.usage = [0, 0]
         self.alerting = []
-
-        logging.info('Verbose output is turned on')
 
         self.config = config
         self.url = self.config.get('api', 'url')
@@ -134,13 +132,13 @@ class CloudTrax:
         self.key = self.config.get('api', 'key')
         self.secret = self.config.get('api', 'secret')
         self.version = self.config.get('api', 'version')
-        self.network = self.config.get_network()
 
-        ###self.login()
-        ###self.collect_nodes()
+        self.collect_networks()
+        self.collect_nodes()
         ###self.collect_users()
 
     def request(self, path, method='GET', data=None):
+        """Issue a request to the CloudTrax API and return the response content."""
         funcname = method.lower()
         if not hasattr(requests, funcname):
             logging.error("Invalid method type {}: No such function in 'requests'.".format(method))
@@ -166,44 +164,18 @@ class CloudTrax:
                 'Authorization': auth,
                 'Signature': sig,
                 }
+        logging.info("{} {}".format(method, url))
         func = getattr(requests, funcname)
-        return func(url, headers=headers, data=jsondata)
-
-    def login(self):
-        """Method to login and create a web session"""
-
-        logging.info('Logging in to CloudTrax Dashboard')
-
-        parameters = {'login': self.network['username'],
-                      'login-pw': self.network['password'],
-                      'status': 'View Status'}
-
-        try:
-            request = self.session.post(self.url['login'], data=parameters)
-            request.raise_for_status()
-
-        except requests.exceptions.HTTPError:
-            logging.error('There was a HTTP error')
-            exit(1)
-        except requests.exceptions.ConnectionError:
-            logging.error('There was a connection error')
-            exit(1)
-
-        # If the login referes to a master network with recursion,
-        # we need to iterate through them to get our stats
-        if self.network['recurse']:
-            networks = distill_html(request.content, 
-                                    'select',
-                                    {'name': 'networks'})
-
-            for network in networks:
-
-                network = str(network).split(' ', 1)[0]
-
-                if network not in self.network['networks']:
-                    self.network['networks'].append(network)
-
-        return self.session
+        response = func(url, headers=headers, data=jsondata)
+        if response.ok:
+            if response.headers['content-type'] == 'application/json':
+                return json.loads(response.text)
+            else:
+                return response.text
+        else:
+            logging.error("{} {} {}".format(
+                response.status_code, response.reason, response.text))
+            exit(response.status_code)
 
     def get_alerting(self):
         """Return a list of alerting nodes"""
@@ -268,39 +240,21 @@ class CloudTrax:
         """Return network usage"""
         return self.usage
 
+    def collect_networks(self):
+        """Assemble network information from CloudTrax."""
+        nets = self.request('/network/list')
+        for data in nets['networks']:
+            network = Network(**data)
+            self.networks[network.id] = network
+
     def collect_nodes(self):
-        """Return network information scraped from CloudTrax"""
-
-        for network in self.network['networks']:
-            parameters = {'id': network,
-                          'showall': '1',
-                          'details': '1'}
-    
-            logging.info('Requesting network status') 
-
-            request = self.session.get(self.url['data'], params=parameters)
-
-            logging.info('Received network status ok') 
-
-            if request.status_code == 200:
-                for raw_values in distill_html(request.content, 'table',
-                                               {'id': 'mytable'}):
-
-                    node = Node(raw_values,
-                                self.get_checkin_data(raw_values[2][0]),
-                                network)
-
-                    if node.is_alerting():
-                        logging.info('%s is alerting' % (node))
-                        self.alerting.append(node)
-
-                    self.nodes[node.get_mac()] = node
-
-            else:
-                logging.error('Request failed') 
-                exit(request.status_code)
-
-        return self.nodes
+        """Assemble node information for each network from CloudTrax."""
+        path = '/node/network/{}/list'
+        for netid in self.networks.keys():
+            nodes = self.request(path.format(netid))
+            for key, data in nodes['nodes'].iteritems():
+                node = Node(key, netid, **data)
+                self.nodes[node.mac] = node
 
     def collect_users(self):
         """Return a list of wifi user statistics scraped from CloudTrax"""

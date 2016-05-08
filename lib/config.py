@@ -34,13 +34,6 @@ class Config:
 
         self.email = dict(self.config.items('email'))
 
-        self.network = {'name': self.config.get('network', 'username'),
-                        'username': self.config.get('network', 'username'),
-                        'password': self.config.get('network', 'password'),
-                        'recurse': self.config.getboolean('network', 'recurse'),
-                        'networks': [self.config.get('network', 'name')]}
-
-
     def get(self, section, key):
         return self.config.get(section, key)
 
