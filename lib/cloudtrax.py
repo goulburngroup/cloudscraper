@@ -175,7 +175,7 @@ class CloudTrax:
 
     def collect_node_history(self):
         """Assemble 24hour node history for each network from CloudTrax."""
-        path = '/history/network/{}/clients?period=day'
+        path = '/history/network/{}/nodes?period=day'
         for netid in self.networks.keys():
             history = self.request(path.format(netid))
             if 'nodes' not in history:
