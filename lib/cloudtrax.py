@@ -94,6 +94,7 @@ class CloudTrax:
 
         self.collect_networks()
         self.collect_nodes()
+        self.collect_node_history()
         self.collect_clients()
 
     def request(self, path, method='GET', data=None):
@@ -140,45 +141,6 @@ class CloudTrax:
         """Return a list of alerting nodes"""
         return self.alerting
 
-    def get_checkin_data(self, node_mac):
-        """Scrape checkin information on the current node"""
-
-        parameters = {'mac': node_mac,
-                      'legend': '0'}
-
-        logging.info('Requesting node checkin status for %s', node_mac)
-
-        request = self.session.get(self.url['checkin'], params=parameters)
-
-        colour_counter = {'cccccc': 0, '1faa5f': 0, '4fdd8f': 0}
-
-        checkin_img = Image.open(cStringIO.StringIO(request.content))
-
-        row = 1
-
-        pixelmap = checkin_img.load()
-
-        for col in range(0, checkin_img.size[0]):
-            pixel_colour = str("%x%x%x" % (pixelmap[col, row][0],
-                                           pixelmap[col, row][1],
-                                           pixelmap[col, row][2]))
-
-            if pixel_colour in colour_counter.keys():
-                colour_counter[pixel_colour] += 1
-            else:
-                colour_counter[pixel_colour] = 1
-
-        # Convert number of pixels into a percent
-        time_as_gw = percentage(colour_counter['1faa5f'],
-                                checkin_img.size[0] - 2)
-        time_as_relay = percentage(colour_counter['4fdd8f'],
-                                   checkin_img.size[0] - 2)
-        time_offline = percentage(colour_counter['cccccc'],
-                                  checkin_img.size[0] - 2)
-        time_online = time_as_gw + time_as_relay
-
-        return (time_as_gw, time_as_relay, time_offline, time_online)
-
     def get_nodes(self):
         """Return a list of the collected Network objects."""
         return self.networks.values()
@@ -211,6 +173,26 @@ class CloudTrax:
                 node = Node(key, netid, **data)
                 self.nodes[node.mac] = node
 
+    def collect_node_history(self):
+        """Assemble 24hour node history for each network from CloudTrax."""
+        path = '/history/network/{}/clients?period=day'
+        for netid in self.networks.keys():
+            history = self.request(path.format(netid))
+            if 'nodes' not in history:
+                continue
+            for nodeid, data in history['nodes'].iteritems():
+                node = self.get_node_by_id(nodeid)
+                if node is None:
+                    continue
+                if 'checkins' in data:
+                    for checkin in data['checkins']:
+                        node.add_checkin(**checkin)
+                if 'traffic' in data:
+                    node.traffic.update(data['traffic'])
+                if 'metrics' in data:
+                    for metrics in data['metrics']:
+                        node.add_metrics(**metrics)
+
     def collect_clients(self):
         """Assemble client information for each network from CloudTrax."""
         path = '/history/network/{}/clients'
@@ -222,6 +204,14 @@ class CloudTrax:
             for key, data in clients['clients'].iteritems():
                 client = Client(key, netid, **data)
                 self.clients[netid][client.mac] = client
+
+    def get_node_by_id(self, id):
+        """Return the Node with the given numeric ID, or None."""
+        id = int(id)
+        for node in self.nodes.values():
+            if node.id == id:
+                return node
+        return None
 
     def graph(self, graph_type, title, arg, img_format='svg'):
         """Return a rendered graph"""

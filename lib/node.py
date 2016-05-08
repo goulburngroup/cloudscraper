@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """ lib/node.py
 
- Node class for CloudScraper
+ Classes reflecting data from the CloudTrax API.
 
  Copyright (c) 2013 The Goulburn Group. All Rights Reserved.
 
@@ -85,6 +85,11 @@ class Node(object):
             last_checkin=None,
             uptime=None,
             ):
+        self.checkins = []
+        self.metrics = []
+        self.traffic = dict()
+        self.status_checkins = {'none': 0}
+
         self.id = int(id)
         self.network = network
         self.name = name
@@ -124,6 +129,23 @@ class Node(object):
 
     def __cmp__(self, other):
         return cmp(self.name, other.name)
+
+    def add_checkin(self, time, status=None):
+        """Checkins are stored as (time, status) tuples.
+
+        We maintain a frequency count of each status as checkins are added.
+        """
+        self.checkins.append((time, status))
+        if status is None:
+            status = 'none'
+        if status in self.status_checkins:
+            self.status_checkins[status] += 1
+        else:
+            self.status_checkins[status] = 1
+
+    def add_metrics(self, time, speed=None):
+        """Store metrics as (time, speed) tuples."""
+        self.metrics.append((time, speed))
 
     def add_gw_usage(self, dl, ul):
         """Add internet usage to node"""
@@ -167,7 +189,7 @@ class Node(object):
 
     def get_type(self):
         """Return a string that describes the node type."""
-        return self.node_type
+        return self.role
 
     def get_table_row(self):
         """Returns a list of items that match up to the screen text table
