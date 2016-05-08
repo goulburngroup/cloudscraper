@@ -232,3 +232,74 @@ class Node(object):
 
     def is_spare(self):
         return self.spare
+
+
+class Client(object):
+    def __init__(
+            self,
+            mac,
+            network,
+            cid=None,
+            band=None,
+            bitrate=None,
+            channel_width=None,
+            link=None,
+            mcs=None,
+            signal=None,
+            traffic=None,
+            wifi_mode=None,
+            last_name=None,
+            last_node=None,
+            last_seen=None,
+            name=None,
+            name_override=None,
+            blocked=None,
+            os=None,
+            os_version=None,
+            ):
+        self.mac = mac
+        self.network = network
+        self.cid = cid
+        self.band = band
+        self.bitrate = bitrate
+        self.channel_width = channel_width
+        self.link = link
+        self.mcs = mcs
+        self.signal = signal
+        self.traffic = traffic
+        self.wifi_mode = wifi_mode
+        self.last_name = last_name
+        self.last_node = last_node
+        self.last_seen = last_seen
+        self.name = name
+        self.name_override = name_override
+        self.blocked = blocked
+        self.os = os
+        self.os_version = os_version
+
+    def __repr__(self):
+        return 'Client {}/{}'.format(
+                self.network,
+                self.mac)
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+
+    def get_total_traffic(self):
+        """Return a 2-tuple of total bytes down and up."""
+        down = 0
+        up = 0
+        if self.traffic:
+            for ssid in self.traffic.values():
+                down += ssid['bdown']
+                up += ssid['bup']
+        return (down, up)
+
+    def get_total_download(self):
+        return self.get_total_traffic()[0]
+
+    def get_total_upload(self):
+        return self.get_total_traffic()[1]

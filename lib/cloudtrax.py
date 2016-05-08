@@ -13,8 +13,7 @@
 
 from BeautifulSoup import BeautifulSoup
 from random import choice
-from lib.node import Network, Node
-from lib.user import User
+from lib.node import Network, Node, Client
 import cStringIO
 import hashlib
 import hmac
@@ -30,10 +29,6 @@ import Image
 
 NONCE_CHARS = string.uppercase + string.lowercase + string.digits
 
-
-#
-# Helper functions
-#
 
 def draw_table(entity_type, entities):
     """Draws a text table representation of the data supplied"""
@@ -66,42 +61,6 @@ def draw_table(entity_type, entities):
     return table.draw()
 
 
-def distill_html(content, element, identifier):
-    """Accept some HTML and return the filtered output"""
-    distilled_text = []
-
-    trimed_content = BeautifulSoup(content).find(element, identifier)
-
-    if element == 'table':
-
-        try:
-            for row in trimed_content.findAll('tr'):
-                raw_values = []
-
-                for cell in row.findAll('td'):
-                    raw_values.append(cell.findAll(text=True))
-
-                # Watch out for blank rows
-                if len(raw_values) > 0:
-                    # Create a new node object for each node in the network
-                    distilled_text.append(raw_values)
-
-        except AttributeError:
-            pass
-
-    if element == 'select':
-
-        try:
-            for row in trimed_content.findAll('option', text=True):
-                if len(row) > 0:
-                    distilled_text.append(row)
-
-        except AttributeError:
-            pass
-
-    return distilled_text
-
-
 def percentage(value, max_value):
     """Returns a float representing the percentage that
        value is of max_value"""
@@ -120,7 +79,7 @@ class CloudTrax:
     def __init__(self, config):
         self.networks = dict()
         self.nodes = dict()
-        self.users = dict()
+        self.clients = dict()
         self.usage = [0, 0]
         self.alerting = []
 
@@ -135,7 +94,7 @@ class CloudTrax:
 
         self.collect_networks()
         self.collect_nodes()
-        ###self.collect_users()
+        self.collect_clients()
 
     def request(self, path, method='GET', data=None):
         """Issue a request to the CloudTrax API and return the response content."""
@@ -220,17 +179,13 @@ class CloudTrax:
 
         return (time_as_gw, time_as_relay, time_offline, time_online)
 
-    def get_session(self):
-        """Return session id"""
-        return self.session
-
-    def get_sub_networks(self):
-        """Return a list of networks associated with this login"""
-        return self.sub_networks
+    def get_nodes(self):
+        """Return a list of the collected Network objects."""
+        return self.networks.values()
 
     def get_nodes(self):
-        """Return a list of node objects"""
-        return self.nodes
+        """Return a list of the collected Node objects."""
+        return self.nodes.values()
 
     def get_users(self):
         """Return a list of user objects"""
@@ -256,48 +211,17 @@ class CloudTrax:
                 node = Node(key, netid, **data)
                 self.nodes[node.mac] = node
 
-    def collect_users(self):
-        """Return a list of wifi user statistics scraped from CloudTrax"""
-
-        for network in self.network['networks']:
-            parameters = {'id': network}
-    
-            logging.info('Requesting user statistics') 
-
-            request = self.session.get(self.url['user'], params=parameters)
-
-            logging.info('Received user statistics ok') 
-
-
-            if request.status_code == 200:
-                for raw_values in distill_html(request.content, 'table',
-                                               {'class': 'inline sortable'}):
-
-                    user = User(raw_values)
-                    usage_dl = user.get_dl()
-                    usage_ul = user.get_ul()
-                    user_mac = user.get_mac()
-                    node_mac = user.get_node_mac()
-
-                    if user_mac in self.users.keys():
-                        self.users[user_mac].add_usage(usage_dl, usage_ul)
-                    else:
-                        self.users[user_mac] = user
-
-                    gateway = self.nodes[node_mac].add_usage(usage_dl, 
-                                                             usage_ul)
-
-                    if gateway != 'self' and gateway != 'not reported':
-                        self.nodes[node_mac].add_gw_usage(usage_dl, usage_ul)
-
-                    self.usage[0] += usage_dl
-                    self.usage[1] += usage_ul
-
-            else:
-                logging.error('Request failed') 
-                exit(request.status_code)
-
-        return self.users
+    def collect_clients(self):
+        """Assemble client information for each network from CloudTrax."""
+        path = '/history/network/{}/clients'
+        for netid in self.networks.keys():
+            self.clients[netid] = dict()
+            clients = self.request(path.format(netid))
+            if 'clients' not in clients:
+                continue
+            for key, data in clients['clients'].iteritems():
+                client = Client(key, netid, **data)
+                self.clients[netid][client.mac] = client
 
     def graph(self, graph_type, title, arg, img_format='svg'):
         """Return a rendered graph"""
