@@ -68,9 +68,9 @@ def percentage(value, max_value):
     return (float(value) * 100) / max_value
 
 
-def make_nonce():
-    """Return a randomly-generated 32-character alphanumeric string."""
-    return ''.join([choice(NONCE_CHARS) for x in range(32)])
+def make_nonce(length=32):
+    """Return a randomly-generated alphanumeric string."""
+    return ''.join([choice(NONCE_CHARS) for x in range(length)])
 
 
 class CloudTrax:
