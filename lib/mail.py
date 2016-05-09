@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# vim: set fileencoding=utf-8 :
 """lib/mail.py
 
 Email convenience module for cloudscraper reporting.

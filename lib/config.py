@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# vim: set fileencoding=utf-8 :
 """lib/config.py
 
 Configuration module for cloudscraper.
@@ -14,7 +15,7 @@ from ConfigParser import RawConfigParser
 
 class Config(RawConfigParser):
     def __init__(self, config_file):
-        super(Config, self).__init__()
+        RawConfigParser.__init__(self)
         self.read(config_file)
 
     def get_db(self):

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# vim: set fileencoding=utf-8 :
 """lib/__init__.py
 
 Library initialiser for cloudscraper.

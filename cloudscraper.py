@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# vim: set fileencoding=utf-8 :
 """cloudscraper.py
 
 A command-line tool to extract, store and analyse usage information from the
@@ -12,7 +13,7 @@ Authors:
 """
 from lib.cloudtrax import CloudTrax
 from lib.config import Config
-from lib.database import Database
+from lib.database import get_connection
 from lib.mail import Email
 
 import argparse
@@ -27,7 +28,8 @@ LOGFORMAT = '%(asctime)s - %(levelname)s - %(message)s'
 parser = argparse.ArgumentParser(description='CloudTrax API scraper')
 parser.add_argument(
         '-c', '--config',
-        nargs='?',
+        nargs=1,
+        metavar='filename',
         default='/opt/cloudscraper/cloudscraper.conf',
         help='configuration filename')
 parser.add_argument(
@@ -35,8 +37,11 @@ parser.add_argument(
         action='count',
         default=0,
         help='increase verbosity')
+parser.add_argument(
+        '-n', '--no-history',
+        action='store_true',
+        help='do not collect historical data')
 args = parser.parse_args()
-
 
 if args.verbose > 1:
     loglevel = logging.DEBUG
@@ -49,5 +54,11 @@ logging.basicConfig(level=loglevel, format=LOGFORMAT)
 
 config = Config(args.config)
 cloudtrax = CloudTrax(config)
-database = Database(config.get_db())
+cloudtrax.collect_networks()
+cloudtrax.collect_nodes()
+if not args.no_history:
+    cloudtrax.collect_node_history()
+    cloudtrax.collect_clients()
+dbconf = config.get_db()
+database = get_connection(dbconf['type'], **dbconf)
 database.store_data(cloudtrax)

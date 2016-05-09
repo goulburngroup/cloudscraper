@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# vim: set fileencoding=utf-8 :
 """lib/cloudtrax.py
 
 CloudTrax API classes for cloudscraper.
@@ -37,10 +38,10 @@ def make_nonce(length=32):
 class CloudTrax(object):
     """CloudTrax API connector.
 
-    On instantiation, this class connects to the CloudTrax API and collects
-    data about networks, nodes, clients and historical statistics, and stores
-    them in as objects, where they are available for reporting or insertion
-    into persistent storage.
+    This class offers methods to connect to the CloudTrax API and collect data
+    about networks, nodes, clients and historical statistics, and stores them
+    as objects, from whence they are available for reporting or insertion into
+    persistent storage.
     """
     def __init__(self, config):
         self.networks = dict()
@@ -57,11 +58,6 @@ class CloudTrax(object):
         self.key = self.config.get('api', 'key')
         self.secret = self.config.get('api', 'secret')
         self.version = self.config.get('api', 'version')
-
-        self.collect_networks()
-        self.collect_nodes()
-        self.collect_node_history()
-        self.collect_clients()
 
     def request(self, path, method='GET', data=None):
         """Issue a request to the CloudTrax API and return the response content."""
@@ -106,6 +102,7 @@ class CloudTrax(object):
     def collect_networks(self):
         """Assemble network information from CloudTrax."""
         nets = self.request('/network/list')
+        logging.info("Got %s networks", len(nets['networks']))
         for data in nets['networks']:
             network = Network(**data)
             self.networks[network.id] = network
@@ -115,6 +112,7 @@ class CloudTrax(object):
         path = '/node/network/{}/list'
         for netid in self.networks.keys():
             nodes = self.request(path.format(netid))
+            logging.info("Got %s nodes for network %s.", len(nodes['nodes']), netid)
             for key, data in nodes['nodes'].iteritems():
                 node = Node(key, netid, **data)
                 self.nodes[node.id] = node
@@ -258,7 +256,6 @@ class Node(object):
         self.channels = channels
         self.ht_modes = ht_modes
         self.hardware = hardware
-        self.flags = flags
         self.location = (latitude, longitude)
         self.mesh_version = mesh_version
         self.connection_keeper_status = connection_keeper_status
@@ -271,6 +268,13 @@ class Node(object):
         self.upgrade_status = upgrade_status
         self.last_checkin = last_checkin
         self.uptime = uptime
+
+        if flags is None or flags == '':
+            self.flags = None
+        if flags.startswith('0x'):
+            self.flags = int(flags, 16)
+        else:
+            self.flags = flags
 
     def __repr__(self):
         return 'Node {}/{} {} {}'.format(
