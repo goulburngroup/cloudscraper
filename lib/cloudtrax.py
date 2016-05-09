@@ -170,7 +170,7 @@ class CloudTrax:
             nodes = self.request(path.format(netid))
             for key, data in nodes['nodes'].iteritems():
                 node = Node(key, netid, **data)
-                self.nodes[node.mac] = node
+                self.nodes[node.id] = node
 
     def collect_node_history(self):
         """Assemble 24hour node history for each network from CloudTrax."""
@@ -180,9 +180,9 @@ class CloudTrax:
             if 'nodes' not in history:
                 continue
             for nodeid, data in history['nodes'].iteritems():
-                node = self.get_node_by_id(nodeid)
-                if node is None:
+                if nodeid not in self.nodes:
                     continue
+                node = self.nodes[nodeid]
                 if 'checkins' in data:
                     for checkin in data['checkins']:
                         node.add_checkin(**checkin)
@@ -203,14 +203,6 @@ class CloudTrax:
             for key, data in clients['clients'].iteritems():
                 client = Client(key, netid, **data)
                 self.clients[netid][client.mac] = client
-
-    def get_node_by_id(self, id):
-        """Return the Node with the given numeric ID, or None."""
-        id = int(id)
-        for node in self.nodes.values():
-            if node.id == id:
-                return node
-        return None
 
     def graph(self, graph_type, title, arg, img_format='svg'):
         """Return a rendered graph"""
@@ -426,7 +418,7 @@ class Node(object):
                 self.name)
 
     def __cmp__(self, other):
-        return cmp(self.name, other.name)
+        return cmp(self.id, other.id)
 
     def add_checkin(self, time, status=None):
         """Checkins are stored as (time, status) tuples.
