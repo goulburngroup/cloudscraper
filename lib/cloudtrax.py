@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """ lib/cloudtrax.py
 
- CloudTrax class for CloudScraper
+ CloudTrax API classes for CloudScraper
 
  Copyright (c) 2013 The Goulburn Group. All Rights Reserved.
 
@@ -11,60 +11,17 @@
 
 """
 
-from BeautifulSoup import BeautifulSoup
 from random import choice
-import cStringIO
 import hashlib
 import hmac
 import json
 import logging
 import requests
 import string
-import texttable
 import time
-import pygal
-import Image
 
 
 NONCE_CHARS = string.uppercase + string.lowercase + string.digits
-
-
-def draw_table(entity_type, entities):
-    """Draws a text table representation of the data supplied"""
-
-    header = {'gateway': ['Name\n(mac)',
-                          'Users',
-                          'DL MB\n(UL MB)',
-                          'GWDL MB\n(GWUL MB)',
-                          'Up\n(Down)',
-                          'IP Address\n(Firmware)'],
-              'relay': ['Name\n(mac)',
-                        'Users',
-                        'DL MB\n(UL MB)',
-                        'Gateway\n(Firmware)',
-                        'Up\n(Down)',
-                        'Latency\n(Hops)'],
-              'spare': ['Name\n(mac)',
-                        'Users',
-                        'DL MB\n(UL MB)',
-                        'Up\n(Down)',
-                        'IP Address\n(Firmware)']}
-
-    table = texttable.Texttable()
-    table.header(header[entity_type])
-
-    for entity in entities:
-        if entities[entity].get_type() == entity_type:
-            table.add_row(entities[entity].get_table_row())
-
-    return table.draw()
-
-
-def percentage(value, max_value):
-    """Returns a float representing the percentage that
-       value is of max_value"""
-
-    return (float(value) * 100) / max_value
 
 
 def make_nonce(length=32):
@@ -72,9 +29,14 @@ def make_nonce(length=32):
     return ''.join([choice(NONCE_CHARS) for x in range(length)])
 
 
-class CloudTrax:
-    """CloudTrax connector class"""
+class CloudTrax(object):
+    """CloudTrax API connector.
 
+    On instantiation, this class connects to the CloudTrax API and collects
+    data about networks, nodes, clients and historical statistics, and stores
+    them in as objects, where they are available for reporting or insertion
+    into persistent storage.
+    """
     def __init__(self, config):
         self.networks = dict()
         self.nodes = dict()
@@ -100,14 +62,14 @@ class CloudTrax:
         """Issue a request to the CloudTrax API and return the response content."""
         funcname = method.lower()
         if not hasattr(requests, funcname):
-            logging.error("Invalid method type {}: No such function in 'requests'.".format(method))
+            logging.error("Invalid method type %s: No such function in 'requests'.", method)
 
         url = self.url + path
 
         auth = 'key={},timestamp={},nonce={}'.format(
                 self.key,
                 int(round(time.time())),
-                make_nonce()
+                make_nonce(),
                 )
         sigstr = auth + path
         jsondata = None
@@ -123,7 +85,7 @@ class CloudTrax:
                 'Authorization': auth,
                 'Signature': sig,
                 }
-        logging.info("{} {}".format(method, url))
+        logging.info("%s %s", method, url)
         func = getattr(requests, funcname)
         response = func(url, headers=headers, data=jsondata)
         if response.ok:
@@ -132,29 +94,9 @@ class CloudTrax:
             else:
                 return response.text
         else:
-            logging.error("{} {} {}".format(
-                response.status_code, response.reason, response.text))
+            logging.error("%s %s %s",
+                    response.status_code, response.reason, response.text)
             exit(response.status_code)
-
-    def get_alerting(self):
-        """Return a list of alerting nodes"""
-        return self.alerting
-
-    def get_nodes(self):
-        """Return a list of the collected Network objects."""
-        return self.networks.values()
-
-    def get_nodes(self):
-        """Return a list of the collected Node objects."""
-        return self.nodes.values()
-
-    def get_users(self):
-        """Return a list of user objects"""
-        return self.users
-
-    def get_usage(self):
-        """Return network usage"""
-        return self.usage
 
     def collect_networks(self):
         """Assemble network information from CloudTrax."""
@@ -204,102 +146,17 @@ class CloudTrax:
                 client = Client(key, netid, **data)
                 self.clients[netid][client.mac] = client
 
-    def graph(self, graph_type, title, arg, img_format='svg'):
-        """Return a rendered graph"""
-        if graph_type == 'node':
-            graph = self.graph_node_usage(arg)
-        elif graph_type == 'user':
-            graph = self.graph_user_usage()
-        else:
-            logging.error('Unknown graph type')
-            exit(1)
+    def get_alerting(self):
+        """Return a list of alerting nodes"""
+        return self.alerting
 
-        graph.title = title
+    def get_networks(self):
+        """Return a list of the collected Network objects."""
+        return self.networks.values()
 
-        if img_format == 'png':
-            return graph.render_to_png()
-
-        return graph.render()
-
-    def graph_node_usage(self, gw_only=False):
-        """Return a node graph"""
-
-        graph_object = pygal.Pie()
-
-        for node in self.nodes:
-            if gw_only:
-                if self.nodes[node].is_gateway():
-                    graph_object.add(self.nodes[node].get_name(), self.nodes[node].get_gw_usage())
-            else:
-                graph_object.add(self.nodes[node].get_name(), self.nodes[node].get_usage())
-
-        return graph_object
-
-    def graph_user_usage(self, gw_only=False):
-        """Return a user graph"""
-
-        graph_object = pygal.XY(stroke=False)
-
-        for user in self.users:
-            graph_object.add(user, [(self.users[user].get_dl(),
-                                    self.users[user].get_ul())])
-
-        return graph_object
-
-    def report_summary(self):
-        """Return a string containing a pretty summary report"""
-        report = 'Summary statistics for the last 24 hours\n'
-        report += '----------------------------------------\n\n'
-        if len(self.alerting) > 0:
-            report += "*** Warning - %s nodes are alerting ***\n\n" % (len(self.alerting))
-
-        report += "Total users: %d\n" % len(self.users)
-
-        report += "Total downloads (MB): %.2f\n" % (float(self.usage[0]) / 1000)
-        report += "Total uploads (MB): %.2f\n" % (float(self.usage[1]) / 1000)
-        report += '\n\n'
-
-        return report
-
-    def report_nodes(self):
-        """Return a string containing a pretty nodes report"""
-        report = 'Node statistics for the last 24 hours\n'
-        report += '-------------------------------------\n\n'
-
-        report += 'Gateway nodes\n'
-        report += draw_table('gateway', self.nodes)
-        report += '\n\n'
-        report += 'Relay nodes\n'
-        report += draw_table('relay', self.nodes)
-        report += '\n\n'
-        report += 'Spare nodes\n'
-        report += draw_table('spare', self.nodes)
-        report += '\n\n'
-
-        return report
-
-    def report_users(self):
-        """Return a string containing a pretty user report"""
-        report = 'User statistics for the last 24 hours\n'
-        report += '-------------------------------------\n\n'
-        report += 'Users\n'
-
-        table = texttable.Texttable()
-        table.header(['Name\n(mac)',
-                      'Last seen on',
-                      'Blocked',
-                      'DL MB',
-                      'UL MB'])
-
-        self.get_users()
-
-        for user in self.users:
-            table.add_row(self.users[user].get_table_row())
-
-        report += table.draw()
-        report += '\n\n'
-
-        return report
+    def get_nodes(self):
+        """Return a list of the collected Node objects."""
+        return self.nodes.values()
 
 
 class Network(object):
@@ -420,12 +277,15 @@ class Node(object):
     def __cmp__(self, other):
         return cmp(self.id, other.id)
 
-    def add_checkin(self, time, status=None):
-        """Checkins are stored as (time, status) tuples.
+    def add_checkin(self, timeslice, status=None):
+        """Add a checkin as a (timeslice, status) tuple.
+
+        Status may be None, in which case there was no checkin during the time
+        sample.
 
         We maintain a frequency count of each status as checkins are added.
         """
-        self.checkins.append((time, status))
+        self.checkins.append((timeslice, status))
         if status is None:
             status = 'none'
         if status in self.status_checkins:
@@ -433,115 +293,24 @@ class Node(object):
         else:
             self.status_checkins[status] = 1
 
-    def add_metrics(self, time, speed=None):
-        """Store metrics as (time, speed) tuples."""
-        self.metrics.append((time, speed))
+    def add_metrics(self, timeslice, speed=None):
+        """Add a metrics as a (timeslice, speed) tuple."""
+        self.metrics.append((timeslice, speed))
 
-    def add_gw_usage(self, dl, ul):
-        """Add internet usage to node"""
-        self.values['gw_dl'] += dl
-        self.values['gw_ul'] += ul
-
-    def add_usage(self, dl, ul):
-        """Add client usage data to node"""
-        self.values['dl'] += dl
-        self.values['ul'] += ul
-        self.values['users'] += 1
-
-        if self.is_gateway():
-            self.values['gw_dl'] += dl
-            self.values['gw_ul'] += ul
-            return 'self'
-        else:
-            return self.values['gateway_name']
-
-    def get_name(self):
-        """Return the name of this node"""
-        return self.values['name']
-
-    def get_mac(self):
-        """Return the mac address of this node"""
-        return self.values['mac']
-
-    def get_time_offline(self):
-        """Return a float of the percent of time in 24hrs offline"""
-        return self.checkin_data[2]
-
-    def get_time_gw(self):
-        """Return a float representing the percent of time in 24hrs online
-           as a gateway node"""
-        return self.checkin_data[0]
-
-    def get_time_relay(self):
-        """Return a float representing the percent of time in 24hrs online
-           as a relay node"""
-        return self.checkin_data[1]
-
-    def get_type(self):
-        """Return a string that describes the node type."""
-        return self.role
-
-    def get_table_row(self):
-        """Returns a list of items that match up to the screen text table
-           for the node type"""
-
-        if self.is_gateway():
-            row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
-                   str(self.values['users']),
-                   '%.2f' % (float(self.values['dl']) / 1000) + '\n(' +
-                       '%.2f' % (float(self.values['ul']) / 1000) + ')',
-                   '%.2f' % (float(self.values['gw_dl']) / 1000) + '\n(' +
-                       '%.2f' % (float(self.values['gw_ul']) / 1000) + ')',
-                   '%.2f' % (self.checkin_data[0]) + '%\n(' +
-                       '%.2f' % (100 - self.checkin_data[0]) + '%)',
-                   self.values['gateway_ip'] + '\n(' +
-                       self.values['fw_version'] + ')']
-
-        if self.is_spare():
-            row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
-                   str(self.values['users']),
-                   '%.2f' % (float(self.values['dl']) / 1000) + '\n(' +
-                       '%.2f' % (float(self.values['ul']) / 1000) + ')',
-                   '%.2f' % (self.checkin_data[0]) + '%\n(' +
-                       '%.2f' % (100 - self.checkin_data[0]) + '%)',
-                   self.values['gateway_ip'] + '\n(' +
-                       self.values['fw_version'] + ')']
-
-        elif self.is_relay():
-            row = [self.values['name'] + '\n(' + self.values['mac'] + ')',
-                   str(self.values['users']),
-                   '%.2f' % (float(self.values['dl']) / 1000) + '\n(' +
-                       '%.2f' % (float(self.values['ul']) / 1000) + ')',
-                   self.values['gateway_name'] + '\n(' +
-                       self.values['fw_version'] + ')',
-                   '%.2f' % (self.checkin_data[1]) + '%\n(' +
-                       '%.2f' % (100 - self.checkin_data[1]) + '%)',
-                   self.values['latency'] + 'ms\n(' + self.values['hops'] + ')']
-
-        return row
-
-    def get_values(self):
-        """Return all values of this node"""
-        return self.values
-
-    def get_gw_usage(self):
-        """Return the internet usage for this node"""
-        return (self.values['gw_dl'], self.values['gw_ul'])
-
-    def get_usage(self):
-        """Return the data transfer for this node"""
-        return (self.values['dl'], self.values['ul'])
-
+    @property
     def is_alerting(self):
-        """Return True if node is altering"""
-        return not self.is_spare() and self.checkin_data[2] > 0
+        """Return whether node is in an alert state."""
+        return not self.spare and self.down
 
+    @property
     def is_gateway(self):
         return self.role == 'gateway'
 
+    @property
     def is_relay(self):
         return self.role == 'repeater'
 
+    @property
     def is_spare(self):
         return self.spare
 
