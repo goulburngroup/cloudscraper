@@ -1,30 +1,25 @@
 #!/usr/bin/env python
-""" lib/database.py
+"""lib/cloudtrax.py
 
- Database class for CloudScraper
+Database abstraction module for cloudscraper.
 
- Copyright (c) 2013 The Goulburn Group. All Rights Reserved.
+© 2016 The Goulburn Group http://www.goulburngroup.com.au, all rights reserved.
 
- http://www.goulburngroup.com.au
-
- Written by Alex Ferrara <alex@receptiveit.com.au>
-
+Authors:
+    Alex Ferrara <alex@receptiveit.com.au>
+    Brendan Jurd <direvus@gmail.com>
 """
-
-import logging
 from psycopg2.extensions import AsIs
 import psycopg2
+import logging
+
 
 class Database:
-    """Database connector class"""
-
     def __init__(self, config):
-
         self.backend = None
 
         if config['type'] == 'pgsql':
             self.backend = Postgres(config)
-
         else:
             raise Exception('Database type is unknown.')
 
@@ -51,11 +46,7 @@ class Database:
 
 
 class Postgres:
-    """Postgres database class"""
-
     def __init__(self, config):
-        """Constructor"""
-
         self.schema = {'users': 'id        SERIAL primary key NOT NULL, \
                                  timestamp timestamp NOT NULL default now(), \
                                  blocked   boolean NOT NULL, \
@@ -91,7 +82,6 @@ class Postgres:
         self.cursor = self.conn.cursor()
 
         self.create_schema()
-
 
     def add_records(self, nodes, users):
         """Add a node in the Postgres database"""
@@ -140,7 +130,6 @@ class Postgres:
 
         self.conn.commit()
 
-
     def get_past_gw_xfer(self, interval):
         """Postgres implementation of this method"""
         self.cursor.execute("""SELECT mac,
@@ -153,7 +142,6 @@ class Postgres:
                              ORDER BY mac""", (interval, ))
 
         return self.cursor
-
 
     def get_past_stats(self, interval):
         """Postgres implementation of this method"""
@@ -169,7 +157,6 @@ class Postgres:
 
         return self.cursor
 
-
     def table_exists(self, table):
         """Check if a particular table exists in the database"""
 
@@ -179,7 +166,6 @@ class Postgres:
                                      WHERE table_name=%s', (table,))
 
         return bool(self.cursor.rowcount)
-
 
     def create_schema(self):
         """Create the current database schema if it doesn't exist"""

@@ -1,23 +1,19 @@
 #!/usr/bin/env python
-""" lib/config.py
+"""lib/config.py
 
- Config class for CloudScraper
+Configuration module for cloudscraper.
 
- Copyright (c) 2013 The Goulburn Group. All Rights Reserved.
+© 2016 The Goulburn Group http://www.goulburngroup.com.au, all rights reserved.
 
- http://www.goulburngroup.com.au
-
- Written by Alex Ferrara <alex@receptiveit.com.au>
-
+Authors:
+    Alex Ferrara <alex@receptiveit.com.au>
+    Brendan Jurd <direvus@gmail.com>
 """
-
 import ConfigParser
 
-class Config:
-    """Cloudscraper configuration class"""
 
+class Config:
     def __init__(self, config_file):
-        """Constructor"""
         self.config = ConfigParser.RawConfigParser()
         self.config.read(config_file)
 

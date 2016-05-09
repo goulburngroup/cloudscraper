@@ -1,12 +1,11 @@
 #!/usr/bin/env python
-""" lib/__init__.py
+"""lib/__init__.py
 
- Library initialisation code
+Library initialiser for cloudscraper.
 
- Copyright (c) 2013 The Goulburn Group. All Rights Reserved.
+© 2016 The Goulburn Group http://www.goulburngroup.com.au, all rights reserved.
 
- http://www.goulburngroup.com.au
-
- Written by Alex Ferrara <alex@receptiveit.com.au>
-
+Authors:
+    Alex Ferrara <alex@receptiveit.com.au>
+    Brendan Jurd <direvus@gmail.com>
 """

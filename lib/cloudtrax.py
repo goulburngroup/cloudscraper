@@ -1,16 +1,21 @@
 #!/usr/bin/env python
-""" lib/cloudtrax.py
+"""lib/cloudtrax.py
 
- CloudTrax API classes for CloudScraper
+CloudTrax API classes for cloudscraper.
 
- Copyright (c) 2013 The Goulburn Group. All Rights Reserved.
+These classes implement select parts of the API described at
+    https://github.com/cloudtrax/docs
 
- http://www.goulburngroup.com.au
+The primary purpose of this module is to extract network, node, and client
+information from the API, and make it available in easily digested Python
+objects, for storage and/or analysis.
 
- Written by Alex Ferrara <alex@receptiveit.com.au>
+© 2016 The Goulburn Group http://www.goulburngroup.com.au, all rights reserved.
 
+Authors:
+    Alex Ferrara <alex@receptiveit.com.au>
+    Brendan Jurd <direvus@gmail.com>
 """
-
 from random import choice
 import hashlib
 import hmac

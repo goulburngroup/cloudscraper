@@ -1,18 +1,15 @@
 #!/usr/bin/env python
-""" cloudscraper.py
+"""cloudscraper.py
 
- A tool to extract and archive usage information from the CloudTrax wifi mesh
-dashboard (cloudtrax.com).
+A command-line tool to extract, store and analyse usage information from the
+CloudTrax wifi mesh API http://api.cloudtrax.com.
 
- Copyright (c) 2013 The Goulburn Group. All Rights Reserved.
+© 2016 The Goulburn Group http://www.goulburngroup.com.au, all rights reserved.
 
- http://www.goulburngroup.com.au
-
- Written by Alex Ferrara <alex@receptiveit.com.au>
-
-
+Authors:
+    Alex Ferrara <alex@receptiveit.com.au>
+    Brendan Jurd <direvus@gmail.com>
 """
-
 from lib.cloudtrax import CloudTrax
 from lib.config import Config
 from lib.database import Database
