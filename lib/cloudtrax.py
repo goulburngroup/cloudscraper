@@ -126,7 +126,9 @@ class CloudTrax(object):
             if 'nodes' not in history:
                 continue
             for nodeid, data in history['nodes'].iteritems():
+                nodeid = int(nodeid)
                 if nodeid not in self.nodes:
+                    logging.info("Node ID %s not found, skipping.", nodeid)
                     continue
                 node = self.nodes[nodeid]
                 if 'checkins' in data:
@@ -297,15 +299,15 @@ class Node(object):
     def __cmp__(self, other):
         return cmp(self.id, other.id)
 
-    def add_checkin(self, timeslice, status=None):
-        """Add a checkin as a (timeslice, status) tuple.
+    def add_checkin(self, time, status=None):
+        """Add a checkin as a (time, status) tuple.
 
         Status may be None, in which case there was no checkin during the time
         sample.
 
         We maintain a frequency count of each status as checkins are added.
         """
-        self.checkins.append((timeslice, status))
+        self.checkins.append((time, status))
         if status is None:
             status = 'none'
         if status in self.status_checkins:
@@ -313,9 +315,9 @@ class Node(object):
         else:
             self.status_checkins[status] = 1
 
-    def add_metrics(self, timeslice, speed=None):
-        """Add a metrics as a (timeslice, speed) tuple."""
-        self.metrics.append((timeslice, speed))
+    def add_metrics(self, time, speed=None):
+        """Add a metrics as a (time, speed) tuple."""
+        self.metrics.append((time, speed))
 
     @property
     def is_alerting(self):
@@ -333,6 +335,24 @@ class Node(object):
     @property
     def is_spare(self):
         return self.spare
+
+    def get_total_traffic(self):
+        """Return a 2-tuple of total bytes down and up."""
+        down = 0
+        up = 0
+        if self.traffic:
+            for ssid in self.traffic.values():
+                down += ssid['bdown']
+                up += ssid['bup']
+        return (down, up)
+
+    @property
+    def total_download(self):
+        return self.get_total_traffic()[0]
+
+    @property
+    def total_upload(self):
+        return self.get_total_traffic()[1]
 
 
 class Client(object):

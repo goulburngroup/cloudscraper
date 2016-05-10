@@ -51,6 +51,7 @@ class Postgres(Database):
         """Store data from a CloudTrax instance in the database."""
         with self.conn.cursor() as cur:
             for net in cloudtrax.get_networks():
+                logging.info("Storing data for %r", net)
                 params = {
                     'id': net.id,
                     'name': net.name,
@@ -69,6 +70,7 @@ class Postgres(Database):
                     cur.execute(self.NETWORK_INSERT_SQL, params)
                 cur.execute(self.NETWORK_LOG_SQL, (net.id,))
             for node in cloudtrax.get_nodes():
+                logging.info("Storing data for %r", node)
                 params = {
                     'id': node.id,
                     'network': node.network,
@@ -100,12 +102,16 @@ class Postgres(Database):
                     'upgrade_status': node.upgrade_status,
                     'last_checkin': node.last_checkin,
                     'uptime': node.uptime,
+                    'traffic': json.dumps(node.traffic),
+                    'download': node.total_download,
+                    'upload': node.total_upload,
                     }
                 cur.execute(self.NODE_UPDATE_SQL, params)
                 if cur.rowcount == 0:
                     cur.execute(self.NODE_INSERT_SQL, params)
                 cur.execute(self.NODE_LOG_SQL, (node.id,))
             for client in cloudtrax.get_clients():
+                logging.info("Storing data for %r", client)
                 params = {
                     'mac': client.mac,
                     'network': client.network,
@@ -200,7 +206,7 @@ class Postgres(Database):
             '    latitude, longitude, mesh_version, connection_keeper_status, '
             '    custom_sh_approved, expedite_upgrade, firmware_version, '
             '    neighbors, load, memfree, upgrade_status, last_checkin, '
-            '    uptime) '
+            '    uptime, traffic, download, upload) '
             'SELECT '
             '    id, network, name, description, role, spare, down, '
             '    mac, ip, lan_info, anonymous_ip, selected_gateway, '
@@ -208,7 +214,7 @@ class Postgres(Database):
             '    latitude, longitude, mesh_version, connection_keeper_status, '
             '    custom_sh_approved, expedite_upgrade, firmware_version, '
             '    neighbors, load, memfree, upgrade_status, last_checkin, '
-            '    uptime '
+            '    uptime, traffic, download, upload '
             'FROM node '
             'WHERE id = %s;')
     NODE_UPDATE_SQL = (
@@ -242,7 +248,10 @@ class Postgres(Database):
             '    memfree = %(memfree)s, '
             '    upgrade_status = %(upgrade_status)s, '
             '    last_checkin = %(last_checkin)s, '
-            '    uptime = %(uptime)s '
+            '    uptime = %(uptime)s, '
+            '    traffic = %(traffic)s, '
+            '    download = %(download)s, '
+            '    upload = %(upload)s '
             'WHERE id = %(id)s;')
     NODE_INSERT_SQL = (
             'INSERT INTO node ('
@@ -252,7 +261,7 @@ class Postgres(Database):
             '    latitude, longitude, mesh_version, connection_keeper_status, '
             '    custom_sh_approved, expedite_upgrade, firmware_version, '
             '    neighbors, load, memfree, upgrade_status, last_checkin, '
-            '    uptime) '
+            '    uptime, traffic, download, upload) '
             'VALUES ('
             '    %(id)s, %(network)s, %(name)s, %(description)s, %(role)s, '
             '    %(spare)s, %(down)s, %(mac)s, %(ip)s, %(lan_info)s, '
@@ -262,7 +271,7 @@ class Postgres(Database):
             '    %(connection_keeper_status)s, %(custom_sh_approved)s, '
             '    %(expedite_upgrade)s, %(firmware_version)s, %(neighbors)s, '
             '    %(load)s, %(memfree)s, %(upgrade_status)s, %(last_checkin)s, '
-            '    %(uptime)s);')
+            '    %(uptime)s, %(traffic)s, %(download)s, %(upload)s);')
 
     CLIENT_LOG_SQL = (
             'INSERT INTO client_log ('
@@ -370,7 +379,10 @@ class Postgres(Database):
                 'memfree int, '
                 'upgrade_status text, '
                 'last_checkin timestamptz, '
-                'uptime text'),
+                'uptime text, '
+                'traffic text, '
+                'download int, '
+                'upload int'),
             ('node_log',
                 'time timestamptz NOT NULL DEFAULT now(), '
                 'id int, '
@@ -403,6 +415,9 @@ class Postgres(Database):
                 'upgrade_status text, '
                 'last_checkin timestamptz, '
                 'uptime text, '
+                'traffic text, '
+                'download int, '
+                'upload int, '
                 'PRIMARY KEY (time, id)'),
             ('client',
                 'mac macaddr, '
@@ -452,4 +467,3 @@ class Postgres(Database):
                 'os_version text, '
                 'PRIMARY KEY (time, mac, network)'),
             ]
-
