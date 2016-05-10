@@ -162,6 +162,10 @@ class CloudTrax(object):
         """Return a list of the collected Node objects."""
         return self.nodes.values()
 
+    def get_clients(self):
+        """Return a list of the collected Client objects."""
+        return [c for n in self.clients.values() for c in n.values()]
+
 
 class Network(object):
     def __init__(
@@ -395,8 +399,10 @@ class Client(object):
                 up += ssid['bup']
         return (down, up)
 
-    def get_total_download(self):
+    @property
+    def total_download(self):
         return self.get_total_traffic()[0]
 
-    def get_total_upload(self):
+    @property
+    def total_upload(self):
         return self.get_total_traffic()[1]

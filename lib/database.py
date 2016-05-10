@@ -105,6 +105,36 @@ class Postgres(Database):
                 if cur.rowcount == 0:
                     cur.execute(self.NODE_INSERT_SQL, params)
                 cur.execute(self.NODE_LOG_SQL, (node.id,))
+            for client in cloudtrax.get_clients():
+                params = {
+                    'mac': client.mac,
+                    'network': client.network,
+                    'cid': client.cid,
+                    'band': client.band,
+                    'bitrate': json.dumps(client.bitrate),
+                    'channel_width': client.channel_width,
+                    'link': client.link,
+                    'mcs': json.dumps(client.mcs),
+                    'signal': json.dumps(client.signal),
+                    'traffic': json.dumps(client.traffic),
+                    'download': client.total_download,
+                    'upload': client.total_upload,
+                    'wifi_mode': client.wifi_mode,
+                    'last_name': client.last_name,
+                    'last_node': client.last_node,
+                    'last_seen': client.last_seen,
+                    'name': client.name,
+                    'name_override': client.name_override,
+                    'blocked': client.blocked,
+                    'os': client.os,
+                    'os_version': client.os_version,
+                    }
+                cur.execute(self.CLIENT_UPDATE_SQL, params)
+                if cur.rowcount == 0:
+                    cur.execute(self.CLIENT_INSERT_SQL, params)
+                cur.execute(self.CLIENT_LOG_SQL, {
+                    'mac': client.mac,
+                    'network': client.network})
 
     def table_exists(self, table):
         """Return whether the given table exists in the database."""
@@ -234,6 +264,55 @@ class Postgres(Database):
             '    %(load)s, %(memfree)s, %(upgrade_status)s, %(last_checkin)s, '
             '    %(uptime)s);')
 
+    CLIENT_LOG_SQL = (
+            'INSERT INTO client_log ('
+            '    mac, network, cid, band, bitrate, channel_width, link, mcs, '
+            '    signal, traffic, download, upload, wifi_mode, last_name, '
+            '    last_node, last_seen, name, name_override, blocked, os, '
+            '    os_version)'
+            'SELECT '
+            '    mac, network, cid, band, bitrate, channel_width, link, mcs, '
+            '    signal, traffic, download, upload, wifi_mode, last_name, '
+            '    last_node, last_seen, name, name_override, blocked, os, '
+            '    os_version '
+            'FROM client '
+            'WHERE mac = %(mac)s AND network = %(network)s;')
+    CLIENT_UPDATE_SQL = (
+            'UPDATE client '
+            'SET '
+            '    cid = %(cid)s, '
+            '    band = %(band)s, '
+            '    bitrate = %(bitrate)s, '
+            '    channel_width = %(channel_width)s, '
+            '    link = %(link)s, '
+            '    mcs = %(mcs)s, '
+            '    signal = %(signal)s, '
+            '    traffic = %(traffic)s, '
+            '    download = %(download)s, '
+            '    upload = %(upload)s, '
+            '    wifi_mode = %(wifi_mode)s, '
+            '    last_name = %(last_name)s, '
+            '    last_node = %(last_node)s, '
+            '    last_seen = %(last_seen)s, '
+            '    name = %(name)s, '
+            '    name_override = %(name_override)s, '
+            '    blocked = %(blocked)s, '
+            '    os = %(os)s, '
+            '    os_version = %(os_version)s '
+            'WHERE mac = %(mac)s AND network = %(network)s;')
+    CLIENT_INSERT_SQL = (
+            'INSERT INTO client ('
+            '    mac, network, cid, band, bitrate, channel_width, link, mcs, '
+            '    signal, traffic, download, upload, wifi_mode, last_name, '
+            '    last_node, last_seen, name, name_override, blocked, os, '
+            '    os_version) '
+            'VALUES ('
+            '    %(mac)s, %(network)s, %(cid)s, %(band)s, %(bitrate)s, '
+            '    %(channel_width)s, %(link)s, %(mcs)s, %(signal)s, '
+            '    %(traffic)s, %(download)s, %(upload)s, %(wifi_mode)s, '
+            '    %(last_name)s, %(last_node)s, %(last_seen)s, %(name)s, '
+            '    %(name_override)s, %(blocked)s, %(os)s, %(os_version)s);')
+
     TABLES = [
             ('network',
                 'id int PRIMARY KEY, '
@@ -325,5 +404,52 @@ class Postgres(Database):
                 'last_checkin timestamptz, '
                 'uptime text, '
                 'PRIMARY KEY (time, id)'),
+            ('client',
+                'mac macaddr, '
+                'network int, '
+                'cid text, '
+                'band text, '
+                'bitrate text, '
+                'channel_width int, '
+                'link text, '
+                'mcs text, '
+                'signal text, '
+                'traffic text, '
+                'download int, '
+                'upload int, '
+                'wifi_mode text, '
+                'last_name text, '
+                'last_node macaddr, '
+                'last_seen timestamptz, '
+                'name text, '
+                'name_override text, '
+                'blocked bool, '
+                'os text, '
+                'os_version text, '
+                'PRIMARY KEY (mac, network)'),
+            ('client_log',
+                'time timestamptz NOT NULL DEFAULT now(), '
+                'mac macaddr, '
+                'network int, '
+                'cid text, '
+                'band text, '
+                'bitrate text, '
+                'channel_width int, '
+                'link text, '
+                'mcs text, '
+                'signal text, '
+                'traffic text, '
+                'download int, '
+                'upload int, '
+                'wifi_mode text, '
+                'last_name text, '
+                'last_node macaddr, '
+                'last_seen timestamptz, '
+                'name text, '
+                'name_override text, '
+                'blocked bool, '
+                'os text, '
+                'os_version text, '
+                'PRIMARY KEY (time, mac, network)'),
             ]
 
