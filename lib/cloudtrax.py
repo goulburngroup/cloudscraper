@@ -28,6 +28,7 @@ import time
 
 
 NONCE_CHARS = string.uppercase + string.lowercase + string.digits
+NULL_DATETIME = '0000-00-00T00:00:00Z'
 
 
 def make_nonce(length=32):
@@ -266,15 +267,21 @@ class Node(object):
         self.load = load
         self.memfree = memfree
         self.upgrade_status = upgrade_status
-        self.last_checkin = last_checkin
         self.uptime = uptime
 
         if flags is None or flags == '':
             self.flags = None
-        if flags.startswith('0x'):
+        elif flags.startswith('0x'):
             self.flags = int(flags, 16)
         else:
             self.flags = flags
+
+        # The API inexplicably reports this field as a datetime with all zeroes
+        # sometimes, we need to catch that and treat it as None.
+        if last_checkin == NULL_DATETIME:
+            self.last_checkin = None
+        else:
+            self.last_checkin = last_checkin
 
     def __repr__(self):
         return 'Node {}/{} {} {}'.format(
