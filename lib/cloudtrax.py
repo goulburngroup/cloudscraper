@@ -138,7 +138,7 @@ class CloudTrax(object):
                     node.traffic.update(data['traffic'])
                 if 'metrics' in data:
                     for metrics in data['metrics']:
-                        node.add_metrics(**metrics)
+                        node.add_checkin(**metrics)
 
     def collect_clients(self):
         """Assemble client information for each network from CloudTrax."""
@@ -242,8 +242,7 @@ class Node(object):
             last_checkin=None,
             uptime=None,
             ):
-        self.checkins = []
-        self.metrics = []
+        self.checkins = dict()
         self.traffic = dict()
         self.status_checkins = {'none': 0}
 
@@ -299,25 +298,30 @@ class Node(object):
     def __cmp__(self, other):
         return cmp(self.id, other.id)
 
-    def add_checkin(self, time, status=None):
-        """Add a checkin as a (time, status) tuple.
+    def add_checkin(self, time, status=None, speed=None):
+        """Add a checkin record for this Node.
 
-        Status may be None, in which case there was no checkin during the time
-        sample.
+        If status is None, there was no checkin during the time sample.
+
+        If speed is None, then either there was no checkin, or no traffic,
+        during the time sample.
 
         We maintain a frequency count of each status as checkins are added.
         """
-        self.checkins.append((time, status))
+        if time in self.checkins:
+            if status is not None:
+                self.checkins[time]['status'] = status
+            if speed is not None:
+                self.checkins[time]['speed'] = speed
+        else:
+            self.checkins[time] = {'status': status, 'speed': speed}
+
         if status is None:
             status = 'none'
         if status in self.status_checkins:
             self.status_checkins[status] += 1
         else:
             self.status_checkins[status] = 1
-
-    def add_metrics(self, time, speed=None):
-        """Add a metrics as a (time, speed) tuple."""
-        self.metrics.append((time, speed))
 
     @property
     def is_alerting(self):

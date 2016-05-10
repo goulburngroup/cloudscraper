@@ -110,6 +110,17 @@ class Postgres(Database):
                 if cur.rowcount == 0:
                     cur.execute(self.NODE_INSERT_SQL, params)
                 cur.execute(self.NODE_LOG_SQL, (node.id,))
+
+                for time, values in node.checkins.iteritems():
+                    params = {
+                        'node': node.id,
+                        'time': time,
+                        'status': values['status'],
+                        'speed': values['speed'],
+                        }
+                    cur.execute(self.CHECKIN_UPDATE_SQL, params)
+                    if cur.rowcount == 0:
+                        cur.execute(self.CHECKIN_INSERT_SQL, params)
             for client in cloudtrax.get_clients():
                 logging.info("Storing data for %r", client)
                 params = {
@@ -322,6 +333,14 @@ class Postgres(Database):
             '    %(last_name)s, %(last_node)s, %(last_seen)s, %(name)s, '
             '    %(name_override)s, %(blocked)s, %(os)s, %(os_version)s);')
 
+    CHECKIN_UPDATE_SQL = (
+            'UPDATE node_checkin '
+            'SET status = %(status)s, speed = %(speed)s '
+            'WHERE node = %(node)s AND time = %(time)s;')
+    CHECKIN_INSERT_SQL = (
+            'INSERT INTO node_checkin (node, time, status, speed) '
+            'VALUES (%(node)s, %(time)s, %(status)s, %(speed)s);')
+
     TABLES = [
             ('network',
                 'id int PRIMARY KEY, '
@@ -466,4 +485,10 @@ class Postgres(Database):
                 'os text, '
                 'os_version text, '
                 'PRIMARY KEY (time, mac, network)'),
+            ('node_checkin',
+                'node int NOT NULL, '
+                'time timestamptz NOT NULL, '
+                'status text, '
+                'speed int, '
+                'PRIMARY KEY (node, time)')
             ]
