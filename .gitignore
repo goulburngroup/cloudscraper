@@ -1,2 +1,7 @@
 cloudscraper.conf
-*.pyc
+
+# Python object files
+*.py[co]
+
+# Editor temporary files
+.*.sw?

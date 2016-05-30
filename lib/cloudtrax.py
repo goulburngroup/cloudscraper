@@ -1,399 +1,432 @@
 #!/usr/bin/env python
-""" lib/cloudtrax.py
+# vim: set fileencoding=utf-8 :
+"""lib/cloudtrax.py
 
- CloudTrax class for CloudScraper
+CloudTrax API classes for cloudscraper.
 
- Copyright (c) 2013 The Goulburn Group. All Rights Reserved.
+These classes implement select parts of the API described at
+    https://github.com/cloudtrax/docs
 
- http://www.goulburngroup.com.au
+The primary purpose of this module is to extract network, node, and client
+information from the API, and make it available in easily digested Python
+objects, for storage and/or analysis.
 
- Written by Alex Ferrara <alex@receptiveit.com.au>
+© 2016 The Goulburn Group http://www.goulburngroup.com.au, all rights reserved.
 
+Authors:
+    Alex Ferrara <alex@receptiveit.com.au>
+    Brendan Jurd <direvus@gmail.com>
 """
-
-from BeautifulSoup import BeautifulSoup
-from lib.node import Node
-from lib.user import User
-import cStringIO
+from random import choice
+import hashlib
+import hmac
+import json
 import logging
 import requests
-import texttable
-import pygal
-import Image
+import string
+import time
 
 
-#
-# Helper functions
-#
-
-def draw_table(entity_type, entities):
-    """Draws a text table representation of the data supplied"""
-
-    header = {'gateway': ['Name\n(mac)',
-                          'Users',
-                          'DL MB\n(UL MB)',
-                          'GWDL MB\n(GWUL MB)',
-                          'Up\n(Down)',
-                          'IP Address\n(Firmware)'],
-              'relay': ['Name\n(mac)',
-                        'Users',
-                        'DL MB\n(UL MB)',
-                        'Gateway\n(Firmware)',
-                        'Up\n(Down)',
-                        'Latency\n(Hops)'],
-              'spare': ['Name\n(mac)',
-                        'Users',
-                        'DL MB\n(UL MB)',
-                        'Up\n(Down)',
-                        'IP Address\n(Firmware)']}
-
-    table = texttable.Texttable()
-    table.header(header[entity_type])
-
-    for entity in entities:
-        if entities[entity].get_type() == entity_type:
-            table.add_row(entities[entity].get_table_row())
-
-    return table.draw()
+NONCE_CHARS = string.uppercase + string.lowercase + string.digits
+NULL_DATETIME = '0000-00-00T00:00:00Z'
 
 
-def distill_html(content, element, identifier):
-    """Accept some HTML and return the filtered output"""
-    distilled_text = []
-
-    trimed_content = BeautifulSoup(content).find(element, identifier)
-
-    if element == 'table':
-
-        try:
-            for row in trimed_content.findAll('tr'):
-                raw_values = []
-
-                for cell in row.findAll('td'):
-                    raw_values.append(cell.findAll(text=True))
-
-                # Watch out for blank rows
-                if len(raw_values) > 0:
-                    # Create a new node object for each node in the network
-                    distilled_text.append(raw_values)
-
-        except AttributeError:
-            pass
-
-    if element == 'select':
-
-        try:
-            for row in trimed_content.findAll('option', text=True):
-                if len(row) > 0:
-                    distilled_text.append(row)
-
-        except AttributeError:
-            pass
-
-    return distilled_text
+def make_nonce(length=32):
+    """Return a randomly-generated alphanumeric string."""
+    return ''.join([choice(NONCE_CHARS) for x in range(length)])
 
 
-def percentage(value, max_value):
-    """Returns a float representing the percentage that
-       value is of max_value"""
+class CloudTrax(object):
+    """CloudTrax API connector.
 
-    return (float(value) * 100) / max_value
-
-
-class CloudTrax:
-    """CloudTrax connector class"""
-
+    This class offers methods to connect to the CloudTrax API and collect data
+    about networks, nodes, clients and historical statistics, and stores them
+    as objects, from whence they are available for reporting or insertion into
+    persistent storage.
+    """
     def __init__(self, config):
-        """Constructor"""
+        self.networks = dict()
         self.nodes = dict()
-        self.users = dict()
+        self.clients = dict()
         self.usage = [0, 0]
         self.alerting = []
 
-        self.session = requests.session()
-
-        logging.info('Verbose output is turned on')
-
         self.config = config
-        self.url = self.config.get_url()
-        self.network = self.config.get_network()
+        self.url = self.config.get('api', 'url')
+        if self.url.endswith('/'):
+            self.url = self.url[:-1]
 
-        self.login()
+        self.key = self.config.get('api', 'key')
+        self.secret = self.config.get('api', 'secret')
+        self.version = self.config.get('api', 'version')
 
-        self.collect_nodes()
-        self.collect_users()
+    def request(self, path, method='GET', data=None):
+        """Issue a request to the CloudTrax API and return the response content."""
+        funcname = method.lower()
+        if not hasattr(requests, funcname):
+            logging.error("Invalid method type %s: No such function in 'requests'.", method)
 
+        url = self.url + path
 
-    def login(self):
-        """Method to login and create a web session"""
+        auth = 'key={},timestamp={},nonce={}'.format(
+                self.key,
+                int(round(time.time())),
+                make_nonce(),
+                )
+        sigstr = auth + path
+        jsondata = None
+        if data is not None:
+            jsondata = json.dumps(data)
+            sigstr += jsondata
+        sighmac = hmac.new(self.secret, sigstr, hashlib.sha256)
+        sig = sighmac.hexdigest()
 
-        logging.info('Logging in to CloudTrax Dashboard')
+        headers = {
+                'OpenMesh-API-Version': self.version,
+                'Content-Type': 'application/json',
+                'Authorization': auth,
+                'Signature': sig,
+                }
+        logging.info("%s %s", method, url)
+        func = getattr(requests, funcname)
+        response = func(url, headers=headers, data=jsondata)
+        if response.ok:
+            if response.headers['content-type'] == 'application/json':
+                return json.loads(response.text)
+            else:
+                return response.text
+        else:
+            logging.error("%s %s %s",
+                    response.status_code, response.reason, response.text)
+            exit(response.status_code)
 
-        parameters = {'login': self.network['username'],
-                      'login-pw': self.network['password'],
-                      'status': 'View Status'}
+    def collect_networks(self):
+        """Assemble network information from CloudTrax."""
+        nets = self.request('/network/list')
+        logging.info("Got %s networks", len(nets['networks']))
+        for data in nets['networks']:
+            network = Network(**data)
+            self.networks[network.id] = network
 
-        try:
-            request = self.session.post(self.url['login'], data=parameters)
-            request.raise_for_status()
+    def collect_nodes(self):
+        """Assemble node information for each network from CloudTrax."""
+        path = '/node/network/{}/list'
+        for netid in self.networks.keys():
+            nodes = self.request(path.format(netid))
+            logging.info("Got %s nodes for network %s.", len(nodes['nodes']), netid)
+            for key, data in nodes['nodes'].iteritems():
+                node = Node(key, netid, **data)
+                self.nodes[node.id] = node
 
-        except requests.exceptions.HTTPError:
-            logging.error('There was a HTTP error')
-            exit(1)
-        except requests.exceptions.ConnectionError:
-            logging.error('There was a connection error')
-            exit(1)
+    def collect_node_history(self):
+        """Assemble 24hour node history for each network from CloudTrax."""
+        path = '/history/network/{}/nodes?period=day'
+        for netid in self.networks.keys():
+            history = self.request(path.format(netid))
+            if 'nodes' not in history:
+                continue
+            for nodeid, data in history['nodes'].iteritems():
+                nodeid = int(nodeid)
+                if nodeid not in self.nodes:
+                    logging.info("Node ID %s not found, skipping.", nodeid)
+                    continue
+                node = self.nodes[nodeid]
+                if 'checkins' in data:
+                    for checkin in data['checkins']:
+                        node.add_checkin(**checkin)
+                if 'traffic' in data:
+                    node.traffic.update(data['traffic'])
+                if 'metrics' in data:
+                    for metrics in data['metrics']:
+                        node.add_checkin(**metrics)
 
-        # If the login referes to a master network with recursion,
-        # we need to iterate through them to get our stats
-        if self.network['recurse']:
-            networks = distill_html(request.content, 
-                                    'select',
-                                    {'name': 'networks'})
-
-            for network in networks:
-
-                network = str(network).split(' ', 1)[0]
-
-                if network not in self.network['networks']:
-                    self.network['networks'].append(network)
-
-        return self.session
+    def collect_clients(self):
+        """Assemble client information for each network from CloudTrax."""
+        path = '/history/network/{}/clients'
+        for netid in self.networks.keys():
+            self.clients[netid] = dict()
+            clients = self.request(path.format(netid))
+            if 'clients' not in clients:
+                continue
+            for key, data in clients['clients'].iteritems():
+                client = Client(key, netid, **data)
+                self.clients[netid][client.mac] = client
 
     def get_alerting(self):
         """Return a list of alerting nodes"""
         return self.alerting
 
-    def get_checkin_data(self, node_mac):
-        """Scrape checkin information on the current node"""
-
-        parameters = {'mac': node_mac,
-                      'legend': '0'}
-
-        logging.info('Requesting node checkin status for %s', node_mac)
-
-        request = self.session.get(self.url['checkin'], params=parameters)
-
-        colour_counter = {'cccccc': 0, '1faa5f': 0, '4fdd8f': 0}
-
-        checkin_img = Image.open(cStringIO.StringIO(request.content))
-
-        row = 1
-
-        pixelmap = checkin_img.load()
-
-        for col in range(0, checkin_img.size[0]):
-            pixel_colour = str("%x%x%x" % (pixelmap[col, row][0],
-                                           pixelmap[col, row][1],
-                                           pixelmap[col, row][2]))
-
-            if pixel_colour in colour_counter.keys():
-                colour_counter[pixel_colour] += 1
-            else:
-                colour_counter[pixel_colour] = 1
-
-        # Convert number of pixels into a percent
-        time_as_gw = percentage(colour_counter['1faa5f'],
-                                checkin_img.size[0] - 2)
-        time_as_relay = percentage(colour_counter['4fdd8f'],
-                                   checkin_img.size[0] - 2)
-        time_offline = percentage(colour_counter['cccccc'],
-                                  checkin_img.size[0] - 2)
-        time_online = time_as_gw + time_as_relay
-
-        return (time_as_gw, time_as_relay, time_offline, time_online)
-
-    def get_session(self):
-        """Return session id"""
-        return self.session
-
-    def get_sub_networks(self):
-        """Return a list of networks associated with this login"""
-        return self.sub_networks
+    def get_networks(self):
+        """Return a list of the collected Network objects."""
+        return self.networks.values()
 
     def get_nodes(self):
-        """Return a list of node objects"""
-        return self.nodes
+        """Return a list of the collected Node objects."""
+        return self.nodes.values()
 
-    def get_users(self):
-        """Return a list of user objects"""
-        return self.users
-
-    def get_usage(self):
-        """Return network usage"""
-        return self.usage
-
-    def collect_nodes(self):
-        """Return network information scraped from CloudTrax"""
-
-        for network in self.network['networks']:
-            parameters = {'id': network,
-                          'showall': '1',
-                          'details': '1'}
-    
-            logging.info('Requesting network status') 
-
-            request = self.session.get(self.url['data'], params=parameters)
-
-            logging.info('Received network status ok') 
-
-            if request.status_code == 200:
-                for raw_values in distill_html(request.content, 'table',
-                                               {'id': 'mytable'}):
-
-                    node = Node(raw_values,
-                                self.get_checkin_data(raw_values[2][0]),
-                                network)
-
-                    if node.is_alerting():
-                        logging.info('%s is alerting' % (node))
-                        self.alerting.append(node)
-
-                    self.nodes[node.get_mac()] = node
-
-            else:
-                logging.error('Request failed') 
-                exit(request.status_code)
-
-        return self.nodes
-
-    def collect_users(self):
-        """Return a list of wifi user statistics scraped from CloudTrax"""
-
-        for network in self.network['networks']:
-            parameters = {'id': network}
-    
-            logging.info('Requesting user statistics') 
-
-            request = self.session.get(self.url['user'], params=parameters)
-
-            logging.info('Received user statistics ok') 
+    def get_clients(self):
+        """Return a list of the collected Client objects."""
+        return [c for n in self.clients.values() for c in n.values()]
 
 
-            if request.status_code == 200:
-                for raw_values in distill_html(request.content, 'table',
-                                               {'class': 'inline sortable'}):
+class Network(object):
+    def __init__(
+            self,
+            id,
+            name,
+            node_count=None,
+            new_nodes=None,
+            spare_nodes=None,
+            down_gateway=None,
+            down_repeater=None,
+            is_fcc=None,
+            longitude=None,
+            latitude=None,
+            latest_firmware_version=None,
+            ):
+        self.id = id
+        self.name = name
+        self.node_count = node_count
+        self.new_nodes = new_nodes
+        self.spare_nodes = spare_nodes
+        self.down_gateway = down_gateway
+        self.down_repeater = down_repeater
+        self.is_fcc = is_fcc
+        self.location = (latitude, longitude)
+        self.latest_firmware_version = latest_firmware_version
 
-                    user = User(raw_values)
-                    usage_dl = user.get_dl()
-                    usage_ul = user.get_ul()
-                    user_mac = user.get_mac()
-                    node_mac = user.get_node_mac()
+    def __cmp__(self, other):
+        return cmp(self.id, other.id)
 
-                    if user_mac in self.users.keys():
-                        self.users[user_mac].add_usage(usage_dl, usage_ul)
-                    else:
-                        self.users[user_mac] = user
+    def __unicode__(self):
+        return self.name
 
-                    gateway = self.nodes[node_mac].add_usage(usage_dl, 
-                                                             usage_ul)
+    def __str__(self):
+        return unicode(self).encode('utf-8')
 
-                    if gateway != 'self' and gateway != 'not reported':
-                        self.nodes[node_mac].add_gw_usage(usage_dl, usage_ul)
+    def __repr__(self):
+        return 'Network {} {}'.format(self.id, self.name)
 
-                    self.usage[0] += usage_dl
-                    self.usage[1] += usage_ul
 
-            else:
-                logging.error('Request failed') 
-                exit(request.status_code)
+class Node(object):
+    def __init__(
+            self,
+            id,
+            network,
+            name=None,
+            description=None,
+            role=None,
+            spare=None,
+            down=None,
+            mac=None,
+            ip=None,
+            lan_info=None,
+            anonymous_ip=None,
+            selected_gateway=None,
+            gateway_path=None,
+            channels=None,
+            ht_modes=None,
+            hardware=None,
+            flags=None,
+            latitude=None,
+            longitude=None,
+            mesh_version=None,
+            connection_keeper_status=None,
+            custom_sh_approved=None,
+            expedite_upgrade=None,
+            firmware_version=None,
+            neighbors=None,
+            load=None,
+            memfree=None,
+            upgrade_status=None,
+            last_checkin=None,
+            uptime=None,
+            ):
+        self.checkins = dict()
+        self.traffic = dict()
+        self.status_checkins = {'none': 0}
 
-        return self.users
+        self.id = int(id)
+        self.network = network
+        self.name = name
+        self.description = description
+        self.role = role
+        self.spare = spare
+        self.down = down
+        self.mac = mac
+        self.ip = ip
+        self.lan_info = lan_info
+        self.anonymous_ip = anonymous_ip
+        self.selected_gateway = selected_gateway
+        self.gateway_path = gateway_path
+        self.channels = channels
+        self.ht_modes = ht_modes
+        self.hardware = hardware
+        self.location = (latitude, longitude)
+        self.mesh_version = mesh_version
+        self.connection_keeper_status = connection_keeper_status
+        self.custom_sh_approved = custom_sh_approved
+        self.expedite_upgrade = expedite_upgrade
+        self.firmware_version = firmware_version
+        self.neighbors = neighbors
+        self.load = load
+        self.memfree = memfree
+        self.upgrade_status = upgrade_status
+        self.uptime = uptime
 
-    def graph(self, graph_type, title, arg, img_format='svg'):
-        """Return a rendered graph"""
-        
-        if graph_type == 'node':
-            graph = self.graph_node_usage(arg)
-        elif graph_type == 'user':
-            graph = self.graph_user_usage()
+        if flags is None or flags == '':
+            self.flags = None
+        elif flags.startswith('0x'):
+            self.flags = int(flags, 16)
         else:
-            logging.error('Unknown graph type')
-            exit(1)
+            self.flags = flags
 
-        graph.title = title
+        # The API inexplicably reports this field as a datetime with all zeroes
+        # sometimes, we need to catch that and treat it as None.
+        if last_checkin == NULL_DATETIME:
+            self.last_checkin = None
+        else:
+            self.last_checkin = last_checkin
 
-        if img_format == 'png':
-            return graph.render_to_png()
+    def __repr__(self):
+        return 'Node {}/{} {} {}'.format(
+                self.network,
+                self.id,
+                self.mac,
+                self.name)
 
-        return graph.render()
+    def __cmp__(self, other):
+        return cmp(self.id, other.id)
 
-    def graph_node_usage(self, gw_only=False):
-        """Return a node graph"""
+    def add_checkin(self, time, status=None, speed=None):
+        """Add a checkin record for this Node.
 
-        graph_object = pygal.Pie()
+        If status is None, there was no checkin during the time sample.
 
-        for node in self.nodes:
-            if gw_only:
-                if self.nodes[node].is_gateway():
-                    graph_object.add(self.nodes[node].get_name(), self.nodes[node].get_gw_usage())
-            else:
-                graph_object.add(self.nodes[node].get_name(), self.nodes[node].get_usage())
+        If speed is None, then either there was no checkin, or no traffic,
+        during the time sample.
 
-        return graph_object
+        We maintain a frequency count of each status as checkins are added.
+        """
+        if time in self.checkins:
+            if status is not None:
+                self.checkins[time]['status'] = status
+            if speed is not None:
+                self.checkins[time]['speed'] = speed
+        else:
+            self.checkins[time] = {'status': status, 'speed': speed}
 
-    def graph_user_usage(self, gw_only=False):
-        """Return a user graph"""
+        if status is None:
+            status = 'none'
+        if status in self.status_checkins:
+            self.status_checkins[status] += 1
+        else:
+            self.status_checkins[status] = 1
 
-        graph_object = pygal.XY(stroke=False)
+    @property
+    def is_alerting(self):
+        """Return whether node is in an alert state."""
+        return not self.spare and self.down
 
-        for user in self.users:
-            graph_object.add(user, [(self.users[user].get_dl(),
-                                    self.users[user].get_ul())])
+    @property
+    def is_gateway(self):
+        return self.role == 'gateway'
 
-        return graph_object
+    @property
+    def is_relay(self):
+        return self.role == 'repeater'
 
-    def report_summary(self):
-        """Return a string containing a pretty summary report"""
-        report = 'Summary statistics for the last 24 hours\n'
-        report += '----------------------------------------\n\n'
-        if len(self.alerting) > 0:
-            report += "*** Warning - %s nodes are alerting ***\n\n" % (len(self.alerting))
+    @property
+    def is_spare(self):
+        return self.spare
 
-        report += "Total users: %d\n" % len(self.users)
+    def get_total_traffic(self):
+        """Return a 2-tuple of total bytes down and up."""
+        down = 0
+        up = 0
+        if self.traffic:
+            for ssid in self.traffic.values():
+                down += ssid['bdown']
+                up += ssid['bup']
+        return (down, up)
 
-        report += "Total downloads (MB): %.2f\n" % (float(self.usage[0]) / 1000)
-        report += "Total uploads (MB): %.2f\n" % (float(self.usage[1]) / 1000)
-        report += '\n\n'
+    @property
+    def total_download(self):
+        return self.get_total_traffic()[0]
 
-        return report
+    @property
+    def total_upload(self):
+        return self.get_total_traffic()[1]
 
-    def report_nodes(self):
-        """Return a string containing a pretty nodes report"""
-        report = 'Node statistics for the last 24 hours\n'
-        report += '-------------------------------------\n\n'
 
-        report += 'Gateway nodes\n'
-        report += draw_table('gateway', self.nodes)
-        report += '\n\n'
-        report += 'Relay nodes\n'
-        report += draw_table('relay', self.nodes)
-        report += '\n\n'
-        report += 'Spare nodes\n'
-        report += draw_table('spare', self.nodes)
-        report += '\n\n'
+class Client(object):
+    def __init__(
+            self,
+            mac,
+            network,
+            cid=None,
+            band=None,
+            bitrate=None,
+            channel_width=None,
+            link=None,
+            mcs=None,
+            signal=None,
+            traffic=None,
+            wifi_mode=None,
+            last_name=None,
+            last_node=None,
+            last_seen=None,
+            name=None,
+            name_override=None,
+            blocked=None,
+            os=None,
+            os_version=None,
+            ):
+        self.mac = mac
+        self.network = network
+        self.cid = cid
+        self.band = band
+        self.bitrate = bitrate
+        self.channel_width = channel_width
+        self.link = link
+        self.mcs = mcs
+        self.signal = signal
+        self.traffic = traffic
+        self.wifi_mode = wifi_mode
+        self.last_name = last_name
+        self.last_node = last_node
+        self.last_seen = last_seen
+        self.name = name
+        self.name_override = name_override
+        self.blocked = blocked
+        self.os = os
+        self.os_version = os_version
 
-        return report
+    def __repr__(self):
+        return 'Client {}/{}'.format(
+                self.network,
+                self.mac)
 
-    def report_users(self):
-        """Return a string containing a pretty user report"""
-        report = 'User statistics for the last 24 hours\n'
-        report += '-------------------------------------\n\n'
-        report += 'Users\n'
+    def __unicode__(self):
+        return self.name
 
-        table = texttable.Texttable()
-        table.header(['Name\n(mac)',
-                      'Last seen on',
-                      'Blocked',
-                      'DL MB',
-                      'UL MB'])
+    def __str__(self):
+        return unicode(self).encode('utf-8')
 
-        self.get_users()
+    def get_total_traffic(self):
+        """Return a 2-tuple of total bytes down and up."""
+        down = 0
+        up = 0
+        if self.traffic:
+            for ssid in self.traffic.values():
+                down += ssid['bdown']
+                up += ssid['bup']
+        return (down, up)
 
-        for user in self.users:
-            table.add_row(self.users[user].get_table_row())
+    @property
+    def total_download(self):
+        return self.get_total_traffic()[0]
 
-        report += table.draw()
-        report += '\n\n'
-
-        return report
+    @property
+    def total_upload(self):
+        return self.get_total_traffic()[1]

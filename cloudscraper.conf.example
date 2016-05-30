@@ -1,10 +1,8 @@
-[common]
-cloudtrax_url = https://cloudtrax.com/
-overview_page = overview2.php
-login_page = dashboard.php
-node_checkin_page = checkin-graph2.php
-data_page = nodes_attnt2.php
-user_page = users2.php
+[api]
+url     = https://api.cloudtrax.com
+key     = your-api-key
+secret  = your-api-secret
+version = 1
 
 [database]
 type = pgsql
@@ -21,12 +19,6 @@ server = mail.yourdomain.com.au
 title = Email Report Title
 ;username = set_your_username
 ;password = set_your_password
-
-[network]
-name = set_your_network_name
-username = set_your_username
-password = set_your_password
-recurse = no
 
 [default_gateway]
 quota = 5000000

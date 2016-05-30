@@ -1,82 +1,27 @@
 #!/usr/bin/env python
-""" lib/config.py
+# vim: set fileencoding=utf-8 :
+"""lib/config.py
 
- Config class for CloudScraper
+Configuration module for cloudscraper.
 
- Copyright (c) 2013 The Goulburn Group. All Rights Reserved.
+© 2016 The Goulburn Group http://www.goulburngroup.com.au, all rights reserved.
 
- http://www.goulburngroup.com.au
-
- Written by Alex Ferrara <alex@receptiveit.com.au>
-
+Authors:
+    Alex Ferrara <alex@receptiveit.com.au>
+    Brendan Jurd <direvus@gmail.com>
 """
+from ConfigParser import RawConfigParser
 
-import ConfigParser
 
-class Config:
-    """Cloudscraper configuration class"""
-
+class Config(RawConfigParser):
     def __init__(self, config_file):
-        """Constructor"""
-        self.config = ConfigParser.RawConfigParser()
-        self.config.read(config_file)
-
-        self.url = {'base': self.config.get('common', 'cloudtrax_url')}
-
-        self.url = {'login': self.url['base'] +
-                             self.config.get('common', 'login_page'),
-                     'data': self.url['base'] +
-                             self.config.get('common', 'data_page'),
-                     'user': self.url['base'] +
-                             self.config.get('common', 'user_page'),
-                     'checkin': self.url['base'] +
-                             self.config.get('common', 'node_checkin_page')}
-
-        self.database = {'type': self.config.get('database', 'type')}
-
-        if self.database['type'] != "none":
-            self.database.update({'host': self.config.get('database', 'host'),
-                                  'database': self.config.get('database',
-                                                         'database'),
-                                  'username': self.config.get('database',
-                                                         'username'),
-                                  'password': self.config.get('database',
-                                                         'password')})
-
-        self.email = dict(self.config.items('email'))
-
-        self.network = {'name': self.config.get('network', 'username'),
-                        'username': self.config.get('network', 'username'),
-                        'password': self.config.get('network', 'password'),
-                        'recurse': self.config.getboolean('network', 'recurse'),
-                        'networks': [self.config.get('network', 'name')]}
-
-
-    def get_url(self):
-        """Return url config"""
-        return self.url
+        RawConfigParser.__init__(self)
+        self.read(config_file)
 
     def get_db(self):
-        """Return database config"""
-        return self.database
+        """Return database config."""
+        return dict(self.items('database'))
 
     def get_email(self):
         """Return email config"""
-        return self.email
-
-    def get_network(self):
-        """Return network config"""
-        return self.network
-
-    def get_node_settings(self, node_name):
-        """Return network quota config"""
-        if not self.config.has_section(node_name):
-            node_name = 'net_default'
-
-        return dict(self.config.items(node_name))
-
-    def set_network(self, network):
-        """Set a single network"""
-        self.network['name'] = network
-        self.network['recurse'] = False
-
+        return dict(self.items('email'))

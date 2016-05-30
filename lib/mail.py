@@ -1,29 +1,27 @@
 #!/usr/bin/env python
-""" lib/mail.py
+# vim: set fileencoding=utf-8 :
+"""lib/mail.py
 
- Email class for CloudScraper
+Email convenience module for cloudscraper reporting.
 
- Copyright (c) 2013 The Goulburn Group. All Rights Reserved.
+This module provides a convenience wrapper for sending multi-part email
+messages according to settings in the cloudscraper configuration.
 
- http://www.goulburngroup.com.au
+© 2016 The Goulburn Group http://www.goulburngroup.com.au, all rights reserved.
 
- Written by Alex Ferrara <alex@receptiveit.com.au>
-
+Authors:
+    Alex Ferrara <alex@receptiveit.com.au>
+    Brendan Jurd <direvus@gmail.com>
 """
-
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
-
 import logging
 import smtplib
 
+
 class Email:
-    """Email connector class"""
-
     def __init__(self, config):
-        """Constructor"""
-
         self.email_from = config['from']
         self.email_to = config['to']
         self.email_subject = config['subject']
@@ -53,17 +51,17 @@ class Email:
         self.email.attach(self.alternative)
 
     def attach_text(self, text_part):
-        """Attach a plain-text alternative"""
+        """Attach a plain-text alternative part."""
         part = MIMEText(text_part)
         self.alternative.attach(part)
 
     def attach_html(self, html_part):
-        """Attach a HTML alternative"""
+        """Attach a HTML alternative part."""
         part = MIMEText(html_part, 'html')
         self.alternative.attach(part)
 
     def attach_image(self, image):
-        """Attach an image"""
+        """Add an image attachment."""
         self.image_count += 1
 
         part = MIMEImage(image)
@@ -72,10 +70,7 @@ class Email:
         self.email.attach(part)
 
     def send(self):
-        """Send email"""
-
         logging.info('Connecting to SMTP server')
-
         mailer = smtplib.SMTP(self.smtp_server)
 
         if self.smtp_auth:
@@ -85,4 +80,3 @@ class Email:
 
         mailer.sendmail(self.email_from, self.email_to.split(), self.email.as_string())
         mailer.quit()
-
