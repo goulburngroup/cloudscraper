@@ -19,7 +19,6 @@ from lib.mail import Email
 import argparse
 import datetime
 import logging
-import pygal
 
 
 LOGFORMAT = '%(asctime)s - %(levelname)s - %(message)s'
