@@ -7,6 +7,7 @@ Requirements
 ------------
 
 * Python (known working with Python 2.7)
+* Psycopg - PostgreSQL database library
 * Requests - HTTP library
 * SMTPlib - SMTP library
 
@@ -15,7 +16,7 @@ Debian/Ubuntu
 
 You should already have Python installed, but you will need to install some modules
 
-    # apt-get install python-mailer python-requests
+    # apt-get install python-mailer python-requests python-psycopg2
 
 PostgreSQL
 ----------
